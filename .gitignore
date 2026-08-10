@@ -1,0 +1,15 @@
+# Python bytecode
+__pycache__/
+*.pyc
+
+# LibreOffice / editor lock files
+.~lock.*#
+
+# Per-timestep frame renders from plot_full_dump.py --frames
+# (regenerable, and one run's sequence is ~27 MB)
+frames/
+
+# OS junk
+Thumbs.db
+Desktop.ini
+.DS_Store
