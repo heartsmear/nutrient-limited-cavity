@@ -9,6 +9,11 @@ __pycache__/
 # (regenerable, and one run's sequence is ~27 MB)
 frames/
 
+# Full space-time dumps from figures.py --dump.  Regenerable, and they are large
+# enough to break the repo: at dx=0.5 a single one reaches 112 MB, above GitHub's
+# 100 MB per-file hard limit.  Summary, timeseries and profile CSVs are kept.
+full_dump.csv
+
 # OS junk
 Thumbs.db
 Desktop.ini

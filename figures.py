@@ -542,11 +542,16 @@ def write_csvs(outdir, res, p, val, dump=False, F=None):
     rows = [("n0_uM", p.n0), ("n_star_uM", nstar), ("mu1", p.mu1), ("Ks1", p.Ks1),
             ("mu2", p.mu2), ("Ks2", p.Ks2), ("Y", p.Y), ("Dn", p.Dn), ("D0", p.D0),
             ("rho_jam", p.rho_jam), ("rho_c", p.rho_c), ("rho_max", p.rho_max),
-            ("Dself_floor", p.Dself_floor),
+            ("dself_shape", p.dself_shape), ("Dself_floor", p.Dself_floor),
+            ("Dself_jam_slope", p.Dself_jam_slope),
+            ("rho_mode", res.get("rho_mode", "")), ("fraction_mode", res.get("fraction_mode", "")),
+            ("nutrient_mode", res.get("nutrient_mode", "")), ("seed_f1", res.get("seed_f1", "")),
             ("L_um", res["L"]), ("dx_um", dx), ("N", res["N"]), ("dt_h", res["dt"]),
             ("T_end_h", t[-1]),
             ("F1_final", val["F1_final"]), ("F1_min", val["F1_min"]),
-            ("delta_f_max", val["delta_f_max"]), ("int_inv_deep", val["int_inv_deep"]),
+            ("t_F1_min_h", val["t_F1_min"]),
+            ("delta_f_max", val["delta_f_max"]), ("delta_f_final", val["delta_f_final"]),
+            ("int_inv_mouth", val["int_inv_mouth"]), ("int_inv_deep", val["int_inv_deep"]),
             ("peak_inv_mouth", float(mo.max())), ("peak_inv_deep", float(dp.max())),
             ("x_nstar_final_um", val["x_nstar"]),
             ("rho_peak", val["rho_peak"]), ("rho_max_over_jam", val["rho_max_over_jam"]),
@@ -555,7 +560,13 @@ def write_csvs(outdir, res, p, val, dump=False, F=None):
             ("front_drop_factor", val["front_drop_factor"]),
             ("M1_bottleneck", val["M1_min"]), ("t_M1_bottleneck_h", val["t_M1_min"]),
             ("M2_bottleneck", val["M2_min"]), ("t_M2_bottleneck_h", val["t_M2_min"]),
-            ("max_resource_drift", res["max_resource_drift"]),
+            ("dF1_per_1000h_late", val["dF1_per_1000h_late"]),
+            ("drho_per_1000h_late", val["drho_per_1000h_late"]),
+            ("f_min", val["f_min"]), ("f_max", val["f_max"]),
+            ("adv_substeps_max", val["adv_substeps_max"]),
+            ("adv_capped_steps", val["adv_capped_steps"]),
+            ("reaction_tol_relative", res.get("reaction_tol_relative", "")),
+            ("boundary_flux_linf", res["max_resource_drift"]),
             ("diffusion_failures", res["diffusion_failures"]),
             ("admissible", val["admissible"]), ("success", res["success"]),
             ("message", res["message"])]
@@ -563,6 +574,21 @@ def write_csvs(outdir, res, p, val, dump=False, F=None):
         w = csv.writer(fh); w.writerow(["quantity", "value"])
         for k, v in rows:
             w.writerow([k, v])
+
+    # history.csv -- the per-step numerics the solver computes and src2 was discarding entirely:
+    # advection substep counts, Newton iteration counts, clip magnitudes, budget residuals.
+    # Without this an advection substep cap or a silently clipped label is invisible after the run.
+    hist = res.get("history_rows") or []
+    if hist:
+        keys = []
+        for row in hist:                       # union, in first-seen order (row 0 has no diag keys)
+            keys += [k for k in row if k != "t_h" and k not in keys]
+        with open(os.path.join(outdir, "history.csv"), "w", newline="") as fh:
+            w = csv.writer(fh)
+            w.writerow(["t_h"] + keys)
+            for row in hist:
+                w.writerow([f"{row['t_h']:.6g}"]
+                           + ["" if k not in row else f"{row[k]:.10g}" for k in keys])
 
     if dump and F is not None:
         cols = ["t_h", "x_um"] + [c for c in PROFILE_FIELDS if c in F]
@@ -587,6 +613,9 @@ def main():
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--regime", choices=sorted(config.REGIMES), default=None)
     ap.add_argument("--n0", type=float, default=None)
+    ap.add_argument("--L", type=float, default=None,
+                    help=f"cavity length [um] (default {config.L:g}). N = L/dx, so raising L at "
+                         f"fixed dx raises the cell count -- watch the max_cells warning.")
     ap.add_argument("--dx", type=float, default=None)
     ap.add_argument("--dt", type=float, default=None)
     ap.add_argument("--T", type=float, default=None)
@@ -602,16 +631,24 @@ def main():
     dx = a.dx if a.dx is not None else base["dx"]
     dt = a.dt if a.dt is not None else base["dt"]
     T = a.T if a.T is not None else base["T"]
+    L = a.L if a.L is not None else config.L
+    if L <= 0:
+        raise SystemExit(f"--L must be positive, got {L:g}")
 
     p = config.params_from_args(a, n0)
     num = config.numerics(T_end=T, dt=dt, dx=dx, n_save=a.n_save)
     ic = config.initial_conditions()
-    outdir = a.outdir or os.path.join(HERE, f"run_n0-{n0:g}_dx{dx:g}_T{T:g}")
+    # L is in the directory name so an L sweep does not overwrite itself.  The seed is anchored
+    # to the OPENING (seed_center_um=25) and does not scale with L, so runs at different L share
+    # the same inoculum -- which is what makes them comparable.
+    outdir = a.outdir or os.path.join(HERE, f"run_n0-{n0:g}_L{L:g}_dx{dx:g}_T{T:g}")
     os.makedirs(outdir, exist_ok=True)
 
-    print(f"n0={n0:g} uM  dx={dx:g} um  dt={dt:g} h  T={T:g} h  n*={config.NSTAR:.4f} uM")
+    N = C.choose_grid_size(L, num)          # warns if min_cells/max_cells clip the requested dx
+    print(f"n0={n0:g} uM  L={L:g} um  dx={dx:g} um (N={N}, realized dx={L / N:.4g} um)  "
+          f"dt={dt:g} h  T={T:g} h  n*={config.NSTAR:.4f} uM")
     t0 = time.time()
-    res = solver.simulate(config.L, p, num, ic, progress=True)
+    res = solver.simulate(L, p, num, ic, progress=True)
     print(f"  simulated {res['N']} cells in {time.time()-t0:.1f}s -- {res['message']}")
 
     val = D.validate(res, p)

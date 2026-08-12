@@ -180,7 +180,20 @@ def validate(res: Dict, p: ModelParams, verbose: bool = True) -> Dict[str, objec
     M1, M2 = masses(res)
     bn = bottleneck(res)
     t = res["t"]
-    int_deep = float(np.trapezoid(dp, t)) if hasattr(np, "trapezoid") else float(np.trapz(dp, t))
+    _trapz = np.trapezoid if hasattr(np, "trapezoid") else np.trapz
+    int_deep = float(_trapz(dp, t))
+    int_mouth = float(_trapz(mo, t))     # mouth-type inverse sorting is the PRIMARY signature;
+                                         # src2 shipped only the deep integral.
+
+    # Late-slope steady-state test (scope 4.3).  A run that has not reached steady state is
+    # "converged" only to a transient; rho_peak at n0=1000 was still creeping at T=3000.
+    rho_t = np.max(res["rho1_profiles"] + res["rho2_profiles"], axis=0)
+    late = t >= (t[0] + 0.9 * (t[-1] - t[0]))
+    if late.sum() >= 2 and t[-1] > t[0]:
+        dF1_late = float(np.polyfit(t[late], F1[late], 1)[0]) * 1000.0
+        drho_late = float(np.polyfit(t[late], rho_t[late], 1)[0]) * 1000.0
+    else:
+        dF1_late = drho_late = float("nan")
 
     checks = {
         "rho_exceeds_max": (res["rho_peak"] > p.rho_max * (1 + 1e-12),
@@ -205,9 +218,21 @@ def validate(res: Dict, p: ModelParams, verbose: bool = True) -> Dict[str, objec
         "metric_clash": (int_deep > 100.0 and df.max() <= 0.0,
                          f"int_inv_deep={int_deep:.1f} but delta_f_max={df.max():.4f} <= 0 "
                          f"-- inv_deep is at its ceiling, not enrichment"),
+        # The fraction is bounded in [0,1] by construction; src/ tracked f_min/f_max and src2 had
+        # dropped the check, so a scheme violation would have been silent.
+        "fraction_out_of_range": (res.get("f_min", 0.0) < -1e-12 or res.get("f_max", 1.0) > 1 + 1e-12,
+                                  f"f in [{res.get('f_min', float('nan')):.6g}, "
+                                  f"{res.get('f_max', float('nan')):.6g}], must be [0,1]"),
+        "advection_substep_cap": (res.get("adv_capped_steps", 0) > 0,
+                                  f"{res.get('adv_capped_steps', 0)} steps hit the "
+                                  f"{res.get('adv_substeps_max', 0)}-substep cap -- CFL not honoured"),
+        "not_steady": (np.isfinite(drho_late) and abs(drho_late) > 1e-3,
+                       f"d rho/dt over the last 10% = {drho_late:+.3e} per 1000 h "
+                       f"(dF1/dt = {dF1_late:+.3e}) -- still transient"),
         "solver_failed": (not res["success"], res["message"]),
     }
-    hard = ("rho_exceeds_max", "unresolved_front", "diffusion_nonconvergence", "solver_failed")
+    hard = ("rho_exceeds_max", "unresolved_front", "diffusion_nonconvergence", "solver_failed",
+            "fraction_out_of_range")
     admissible = not any(checks[k][0] for k in hard)
 
     out = dict(checks, admissible=admissible, dx_over_lambda=dol,
@@ -216,7 +241,13 @@ def validate(res: Dict, p: ModelParams, verbose: bool = True) -> Dict[str, objec
                x_nstar=nstar_front(x, n_fin, nstar) if nstar else float("nan"),
                rho_peak=res["rho_peak"], q_min=res["q_min"],
                F1_final=float(F1[-1]), F1_min=float(F1.min()),
-               delta_f_max=float(df.max()), int_inv_deep=int_deep,
+               delta_f_max=float(df.max()), delta_f_final=float(df[-1]),
+               t_F1_min=float(t[int(np.argmin(F1))]),
+               int_inv_deep=int_deep, int_inv_mouth=int_mouth,
+               dF1_per_1000h_late=dF1_late, drho_per_1000h_late=drho_late,
+               f_min=res.get("f_min", float("nan")), f_max=res.get("f_max", float("nan")),
+               adv_substeps_max=res.get("adv_substeps_max", 0),
+               adv_capped_steps=res.get("adv_capped_steps", 0),
                rho_max_over_jam=float(rho_fin.max() / p.rho_jam), **bn)
 
     if verbose:
@@ -224,8 +255,12 @@ def validate(res: Dict, p: ModelParams, verbose: bool = True) -> Dict[str, objec
               f"rho_peak={out['rho_peak']:.4f} (rho/rho_jam={out['rho_max_over_jam']:.3f})")
         print(f"  lambda_front={out['lambda_front']:.2f} um  dx={dx:g}  "
               f"dx/lambda={dol:.2f}   q_min={out['q_min']:.4f}")
-        print(f"  F1 {out['F1_min']:.4g} -> {out['F1_final']:.4f}   "
-              f"delta_f_max={out['delta_f_max']:+.4f}   int_inv_deep={int_deep:.1f}")
+        print(f"  F1 {out['F1_min']:.4g} (t={out['t_F1_min']:.0f} h) -> {out['F1_final']:.4f}   "
+              f"delta_f {out['delta_f_max']:+.4f} max / {out['delta_f_final']:+.4f} final")
+        print(f"  int_inv_mouth={int_mouth:.1f}  int_inv_deep={int_deep:.1f}   "
+              f"f in [{out['f_min']:.4g}, {out['f_max']:.4g}]   "
+              f"adv_substeps_max={out['adv_substeps_max']}")
+        print(f"  late slope per 1000 h:  dF1={dF1_late:+.3e}   drho={drho_late:+.3e}")
         for k in checks:
             failed, detail = checks[k]
             if failed:

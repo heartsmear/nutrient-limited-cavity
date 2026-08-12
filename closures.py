@@ -86,6 +86,12 @@ class Numerics:
     max_cells: int = 4000          # was 600 in src/: that capped dx at L/600
     advection_cfl: float = 0.45
     max_advection_substeps: int = 2000
+    # Reaction/nutrient Newton stopping rule.  True (default) = tolerance RELATIVE to the nutrient
+    # budget scale |n| + max(rho)/Y, plus a stagnation break.  False = src/'s ABSOLUTE 1e-12, which
+    # is unreachable once the resource total exceeds ~1e4 and therefore burns the full iteration cap
+    # every step (measured: cap hit on 88% of steps, 13x the necessary work, at a residual already
+    # 1e-18 relative).  Set False to reproduce src/ bit-for-bit -- see test_regression.py.
+    reaction_tol_relative: bool = True
 
 
 @dataclass(frozen=True)
@@ -94,8 +100,10 @@ class InitialConditions:
     seed_center_um: float = 25.0
     seed_width_um: float = 20.0
     seed_f1: float = 0.5
-    rho_mode: str = "opening_gaussian"     # opening_gaussian | uniform | deep_gaussian
+    rho_mode: str = "opening_gaussian"     # opening_gaussian | uniform | deep_gaussian | first_mode
+    fraction_mode: str = "uniform"         # uniform | small_noise | patchy | left_right | right_left
     nutrient_mode: str = "filled"          # filled | empty | linear
+    random_seed: int = 1                   # for the stochastic fraction modes
 
 
 # =============================================================================
@@ -523,17 +531,40 @@ def initial_total_density(x, L, p: ModelParams, ic: InitialConditions) -> np.nda
         rho = ic.rho_seed * np.ones_like(x)
     elif ic.rho_mode == "deep_gaussian":
         rho = ic.rho_seed * np.exp(-0.5 * ((x - 0.70 * L) / max(0.08 * L, 1.0)) ** 2)
+    elif ic.rho_mode == "first_mode":
+        rho = ic.rho_seed * np.sin(0.5 * np.pi * x / L)
     else:
         raise ValueError(f"unknown rho_mode {ic.rho_mode!r}")
     return np.clip(rho, 0.0, p.rho_jam)
 
 
-def initial_fraction(x, ic: InitialConditions) -> np.ndarray:
+def initial_fraction(x, ic: InitialConditions, L=None) -> np.ndarray:
+    """Initial strain-1 fraction.  Pure controls (seed_f1 = 0 or 1) are preserved exactly.
+
+    The non-uniform modes were dropped in the first port and are restored here: they are what
+    IC-robustness tests need, and they are the only way to make the ancestry B0 channel non-zero
+    (a uniform seed_f1 = 0.5 gives h^0 == 0 identically).
+    """
     if ic.seed_f1 <= 0.0:
         return np.zeros_like(x)
     if ic.seed_f1 >= 1.0:
         return np.ones_like(x)
-    return np.clip(ic.seed_f1 * np.ones_like(x), 0.0, 1.0)
+    L = float(L) if L is not None else float(x[-1] + 0.5 * (x[1] - x[0]) if len(x) > 1 else x[-1])
+    rng = np.random.default_rng(ic.random_seed)
+    if ic.fraction_mode == "uniform":
+        f = ic.seed_f1 * np.ones_like(x)
+    elif ic.fraction_mode == "small_noise":
+        f = ic.seed_f1 + 0.02 * rng.standard_normal(len(x))
+    elif ic.fraction_mode == "patchy":
+        f = ic.seed_f1 + 0.35 * np.sin(2.0 * np.pi * x / max(30.0, 0.12 * L))
+        f += 0.05 * rng.standard_normal(len(x))
+    elif ic.fraction_mode == "left_right":
+        f = np.where(x < 0.5 * L, 1.0, 0.0)
+    elif ic.fraction_mode == "right_left":
+        f = np.where(x < 0.5 * L, 0.0, 1.0)
+    else:
+        raise ValueError(f"unknown fraction_mode {ic.fraction_mode!r}")
+    return np.clip(f, 0.0, 1.0)
 
 
 def initial_nutrient(x, p: ModelParams, ic: InitialConditions) -> np.ndarray:

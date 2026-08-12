@@ -50,7 +50,8 @@ from closures import (
 # 1+2. Coupled reaction + nutrient diffusion
 # =============================================================================
 def coupled_reaction_nutrient(rho1, rho2, n, p: ModelParams, dt, B_n, b_n,
-                              q=None, S=None, iters: int = 60, tol: float = 1e-12):
+                              q=None, S=None, iters: int = 60, tol: float = 1e-12,
+                              tol_relative: bool = True):
     """Solve local Monod growth and nutrient diffusion SIMULTANEOUSLY over one step.
 
         rho_i^new = rho_i exp(dt * q * g_i(n^new))
@@ -94,14 +95,26 @@ def coupled_reaction_nutrient(rho1, rho2, n, p: ModelParams, dt, B_n, b_n,
         dg2 = q * p.mu2 * p.Ks2 / (p.Ks2 + nt) ** 2
         return e1, e2, e1 * dt * dg1 + e2 * dt * dg2      # dR/d(ntilde), diagonal in ntilde
 
+    # The residual F has the units of the nutrient budget, whose natural magnitude is
+    # |n| + max(rho)/Y.  At jamming rho/Y ~ 3.4e6, so an ABSOLUTE tol of 1e-12 is three orders
+    # below double precision and can never be met: the solve reaches round-off in ~5 iterations
+    # and then burns the remaining 55 every step.  (Measured: iters pinned at the 60 cap on 88%
+    # of steps while the residual sat at 1.1e-18 RELATIVE.)  So tol is relative to that scale.
+    scale = max(1.0, float(np.max(np.abs(n_old))) + float(np.max(rho_old)) / p.Y)
+    tol_eff = tol * scale if tol_relative else tol
+
     nc = n_old.copy()
     it = 0
+    Fprev = np.inf
     for it in range(1, iters + 1):
         e1, e2, dR = R_and_dR(nc)
         F = B_n @ nc - n_old - dt * b_n + spread(e1 + e2 - rho_old) / p.Y
         Fn0 = float(np.max(np.abs(F)))
-        if Fn0 < tol:
+        if Fn0 < tol_eff:
             break
+        if tol_relative and it > 3 and Fn0 > 0.99 * Fprev:
+            break                              # stagnated at round-off; more iterations are noise
+        Fprev = Fn0
         Dd = diags(dR / p.Y, 0, format="csc")
         J = (B_n + (Dd if S is None else (S.T @ Dd @ S))).tocsc()   # chain rule through S
         delta = spsolve(J, -F)
@@ -216,7 +229,8 @@ def one_step(rho1, rho2, n, p: ModelParams, num: Numerics, dx, dt, B_n, b_n, S=N
     # 1+2. growth cannot proceed into occupied space; q is EXACTLY 1 below rho_c
     q = growth_space_factor(rho_old, p)
     rho1_r, rho2_r, n_new, diag_react = coupled_reaction_nutrient(
-        rho1, rho2, n, p, dt, B_n, b_n, q=q, S=S)
+        rho1, rho2, n, p, dt, B_n, b_n, q=q, S=S,
+        tol_relative=num.reaction_tol_relative)
     n_new = np.maximum(n_new, 0.0)
     rho_r = rho1_r + rho2_r
 
@@ -291,6 +305,9 @@ def simulate(L: float, p: ModelParams, num: Numerics, ic: InitialConditions,
 
     rho_peak = float(np.max(rho1 + rho2))
     q_min = 1.0
+    f_min, f_max = 1.0, 0.0            # positivity of the FRACTION: must stay in [0,1]
+    adv_substeps_max = 1
+    adv_capped = 0
     resource_drift = 0.0
     diffusion_failures = 0
     success, message = True, "completed"
@@ -318,6 +335,14 @@ def simulate(L: float, p: ModelParams, num: Numerics, ic: InitialConditions,
             break
 
         rho_peak = max(rho_peak, float(diag["max_rho"]))
+        # f in [0,1] is an invariant of the scheme; src/ tracked it and src2 had lost it.
+        occ = (rho1 + rho2) > p.tiny_density
+        if occ.any():
+            fo = rho1[occ] / (rho1[occ] + rho2[occ])
+            f_min = min(f_min, float(fo.min())); f_max = max(f_max, float(fo.max()))
+        ns = int(diag.get("advection_substeps", 1))
+        adv_substeps_max = max(adv_substeps_max, ns)
+        adv_capped += int(ns >= num.max_advection_substeps)
         # Per-step version of the growth-ceiling condition: only a cell that STARTS in the danger
         # band can jump the ramp, so police membership of the band rather than refusing dt up front.
         if dt_risky and rho_peak > rho_danger and success:
@@ -354,7 +379,13 @@ def simulate(L: float, p: ModelParams, num: Numerics, ic: InitialConditions,
         "rho1_profiles": R1, "rho2_profiles": R2, "n_profiles": NN,
         "rho1_final": rho1, "rho2_final": rho2, "n_final": n,
         "history_rows": scalar_hist,
+        # IC provenance, so summary.csv records WHICH run this was, not just its parameters.
+        "rho_mode": ic.rho_mode, "fraction_mode": ic.fraction_mode,
+        "nutrient_mode": ic.nutrient_mode, "seed_f1": ic.seed_f1,
+        "reaction_tol_relative": num.reaction_tol_relative,
         "rho_peak": rho_peak, "q_min": q_min,
+        "f_min": f_min, "f_max": f_max,
+        "adv_substeps_max": adv_substeps_max, "adv_capped_steps": adv_capped,
         "max_resource_drift": resource_drift,
         "diffusion_failures": diffusion_failures,
         "success": success, "message": message,

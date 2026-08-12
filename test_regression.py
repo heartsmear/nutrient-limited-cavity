@@ -91,7 +91,12 @@ def compare(n0, T, dt, dx, label, shape="discontinuous"):
 
     p_old = G.params(n0)          # for the parameter cross-check below (same biology either way)
     p_new = replace(C2.ModelParams(), n0=float(n0), **kw_new)
-    num_new = replace(C2.Numerics(), T_end=T, dt=dt, dx_target=dx, n_save=3)
+    # reaction_tol_relative=False selects src/'s absolute Newton tolerance.  src2's default (True)
+    # is a scale-relative criterion that is ~13x faster and agrees to 12 significant figures, but
+    # it takes a different number of Newton steps, so it cannot be BIT-identical.  This test is the
+    # bit-identity guard, so it pins the legacy rule.
+    num_new = replace(C2.Numerics(), T_end=T, dt=dt, dx_target=dx, n_save=3,
+                      reaction_tol_relative=False)
     ic_new = C2.InitialConditions()
     t0 = time.time()
     new = S2.simulate(1000.0, p_new, num_new, ic_new)
