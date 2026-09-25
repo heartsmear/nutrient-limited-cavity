@@ -1,16 +1,17 @@
-# Two-strain cavity model (E. coli / glucose)
+# Nutrient-limited dynamics in confined cavities
 
-A 1D continuum model of two bacterial strains competing for a single diffusing nutrient inside a
-cavity that is open at one end (`x = 0`, nutrient source) and closed at the other. The two strains
-differ in their Monod parameters so that selection reverses across a crossover concentration `n*`:
-the fast, low-affinity strain wins where `n > n*`, the slow, high-affinity strain wins where
-`n < n*`. Because the population depletes its own resource, that crossover sweeps through the
-cavity, and the final composition reflects the *history* of selection rather than the local
-environment at the final time.
+Code, run outputs and draft for the bachelor's thesis *Nutrient-Limited Dynamics in Confined
+Cavities*. The model is a 1D continuum description of *E. coli* growing in a dead-end cavity that
+is fed with glucose only through its opening, where cells are also washed out.
 
-This is a clean re-implementation of an earlier `src/` stack, with the chemotaxis machinery
-removed and the duplicated code paths collapsed into one. Each module's docstring records what
-changed relative to the original and why.
+- **One strain** gives the steady-state chapter: the establishment threshold, the threshold length
+  `L*`, and when the jamming transition is continuous or a fold.
+- **Two strains** competing for the glucose give the sorting chapter: *inverse sorting*, where a
+  strain dominates regions in which it is locally disfavoured. An ancestry kernel explains it.
+
+The thesis itself is in [`thesis/`](thesis/): `draft2.tex`, the compiled `draft2.pdf`,
+`references2.bib` and the 42 figures it includes. That is everything `draft2.tex` needs to
+compile (pdflatex + biber).
 
 ## Model
 
@@ -18,12 +19,7 @@ changed relative to the original and why.
 d_t rho1 + d_x J1 = q(rho) g1(n) rho1
 d_t rho2 + d_x J2 = q(rho) g2(n) rho2
 d_t n             = Dn d_xx n - (1/Y) [ q(rho) g1(n) rho1 + q(rho) g2(n) rho2 ]
-```
 
-with Monod growth, a total biomass flux that is collective diffusion down the density gradient,
-and a relative label flux that carries no net mass:
-
-```
 g_i(n) = mu_i n / (Ks_i + n)
 J      = -D_col(rho) d_x rho
 J1     = f J - D_self(rho) rho d_x f          f = rho1 / rho
@@ -38,140 +34,166 @@ rho(0,t) = 0           J(L,t) = 0
 D_self rho d_x f = 0   at x = 0 and x = L     (no relative label flux)
 ```
 
-`D_col` follows Slepukhin Eq. 16 in the additive, continuous form their simulation code uses:
-Richardson–Zaki mobility times the Carnahan–Starling modulus below `rho_jam`, continuing into a
-stiff branch above it that pins the density near close packing. Jamming is therefore carried
-entirely by the transport coefficient — there is no pressure projection and no density clip.
+- **`D_col`** is Slepukhin's Eq. 16 in the additive, continuous form of their simulation code:
+  Richardson–Zaki mobility times the Carnahan–Starling modulus below `rho_jam`, and a stiff branch
+  above it that pins the density near close packing. Jamming is carried by the transport
+  coefficient alone, so there is no pressure projection and no density clip.
+- **`D_self`** is the Slepukhin/Karita form (`alpha = 0.95`, floor `1.5e-3`). It is discontinuous
+  at `rho_jam`.
+- **`q(rho)`** limits growth near close packing:
+  - `q = 1` for `rho <= 0.95`;
+  - `q` ramps linearly to `0` between `0.95` and `rho = 1`.
 
-### The growth-space factor `q(rho)`
+  It keeps `rho <= 1` at very high feed. `q` is exactly 1 in all the main thesis runs; it acts
+  only in the `n0 = 10^6 µM` growth-factor comparison.
 
-Growth is damped as the cavity approaches close packing:
+## Numerics
 
-```
-q = 1                                    rho <= rho_c            (rho_c   = 0.95)
-  = (rho_max - rho) / (rho_max - rho_c)  rho_c < rho < rho_max   (rho_max = 1.0)
-  = 0                                    rho >= rho_max
-```
+- **Reaction and nutrient:** solved jointly implicit with a damped Newton iteration.
+  Consumption is yield-exact (the nutrient drawn is `(rho_new - rho_old)/Y`), so the reaction
+  step conserves `n + rho/Y` to round-off.
+- **Collective diffusion:** backward Euler, Newton with an Armijo line search.
+- **Strain labels:** advected by donor-cell upwinding, with an optional van Leer flux limiter
+  (`--limiter vanleer`).
+- **Default settings.** Unless a figure says otherwise, every thesis run uses:
+  - the van Leer limiter;
+  - `dx = 0.5 um` and `dt = 0.05 h`;
+  - a seed of `rho_seed = 1e-4`, about 7 cells.
+- **Exception:** the sweeps behind the discretisation-error table use the unlimited scheme at
+  `rho_seed = 1e-6`.
+- **Ancestry kernel** (`adjoint_kernel.py`): solves the adjoint of the label transport, in two
+  variants:
+  - first-order (`none`);
+  - second-order van Leer with an FCT limiter that keeps `K >= 0` (`vanleer`).
 
-This term is **not** in the older formulation of the model. It exists because the only sink in a
-closed cavity is the mouth, so `D_col` redistributes biomass but never removes it: at high feed
-concentration the reaction outproduces the mouth outflux and the density accumulates without
-bound — the previous stack reached a packing fraction of 199%. Limiting the source is what makes
-`rho <= 1` an invariant rather than a hope, and the ramp (rather than a hard cutoff) makes the
-density equation logistic near the ceiling so it approaches `rho_max` asymptotically.
-
-`q` is exactly `1.0` for `rho <= 0.95`, which every reference regime here satisfies, so it is
-inert in those runs and they remain bit-identical to the stack this replaces. Note that it scales
-the *selection source* too: the mean growth rate becomes `q * gbar`, so `g1 - gbar = q (1-f) s(n)`
-and the fraction equation reads
-
-```
-d_t f + u d_x f = (1/rho) d_x (D_self rho d_x f) + q(rho) f (1-f) s(n)
-```
-
-Consumption is yield-exact — the nutrient drawn is `(rho_new - rho_old)/Y` rather than
-`dt (g1 rho1 + g2 rho2)/Y` — so `q` damps growth and uptake consistently and `n + rho/Y` is
-conserved to round-off at finite `dt`.
+  The kernel heatmaps use `vanleer`; the `h_theory` profiles use `none`.
 
 ## Parameters
 
-The Monod constants are **measured, not designed**: two *E. coli* MG1655 knockouts competing for
-glucose, a high-affinity scavenger (`dptsG`, transporting through Mgl) and a fast low-affinity
-glutton (`dmglBAC`, transporting through PtsG), with constants from Steinsiek et al. 2012.
+|            | scavenger (strain 1) | glutton (strain 2) |
+|------------|----------------------|--------------------|
+| `mu`       | 0.21 h⁻¹             | 0.78 h⁻¹           |
+| `Ks`       | 0.2 µM               | 15 µM              |
 
-| | scavenger (strain 1) | glutton (strain 2) |
-|---|---|---|
-| `mu` | 0.21 h⁻¹ | 0.78 h⁻¹ |
-| `Ks` | 0.2 µM (Mgl Kd) | 15.0 µM (PtsG Km) |
+- **Growth rates.** The maximum growth rates are the measured values of Steinsiek & Bettenbrock for
+  the *ptsG* mutant and its parent MG1655.
+- **Half-saturation constants** were not measured there. They are chosen to place the crossover at
+  `n* = (mu1 Ks2 - mu2 Ks1)/(mu2 - mu1) = 5.2526 µM`.
+- **Other parameters:**
+  - `Y = 2.895e-7` packing fraction per µM, from a yield of 0.45 g/g;
+  - `Dn = 1.2e6 µm²/h`, half the free-solution glucose diffusivity;
+  - `D0 = 376 µm²/h`, `eta = 5.8`, `rho_jam = 0.64`.
 
-The crossover is therefore **derived rather than targeted**:
-
-```
-n* = (mu1 Ks2 - mu2 Ks1) / (mu2 - mu1) = 5.2526 uM
-```
-
-Nutrient concentrations are in µM, lengths in µm, time in hours. `Y = 2.895e-7` packing fraction
-per µM follows from a yield of 0.45 g/g, and `Dn = 1.2e6 um^2/h` is half the free-solution
-glucose diffusivity. Transport uses `D0 = 376 um^2/h`, `eta = 5.8`, `rho_jam = 0.64`.
-
-`D_self` defaults to the discontinuous Slepukhin/Karita form as distributed (`alpha = 0.95`,
-floor `1.5e-3`); a smooth variant is available via `dself_shape="continuous"`. The choice is
-load-bearing in the jammed phase — it sets whether the graveyard remixes or stays frozen — so it
-is a modelling decision, not a tolerance.
+Units are µM, µm and hours throughout.
 
 ## Requirements
 
-Python 3.11 with `numpy`, `scipy`, `matplotlib`, `pandas`.
+Python 3.11 with the packages in `requirements.txt` (the versions the thesis was produced with):
 
 ```bash
-pip install numpy scipy matplotlib pandas
+pip install -r requirements.txt
 ```
 
-## Layout
-
-| Module | Role |
-|---|---|
-| `config.py` | Single source of truth for parameters and regimes. `params(n0)` builds the whole set in one place; regimes carry their own `dx`, because the nutrient boundary layer shrinks as the cavity fills. Run it for a self-test that prints `n*`, the regimes and a resolution estimate. |
-| `closures.py` | The physics: Monod growth, the growth-space factor `q(rho)`, collective and self diffusivity, grid and boundary operators. No solver. Jamming is carried by `D_col` alone — no pressure projection, no density clip. |
-| `solver.py` | The only time-stepping loop. Reaction and nutrient diffusion are solved **jointly implicit** (damped Newton); collective diffusion is backward Euler with Newton + Armijo. |
-| `diagnostics.py` | Everything measured *from* a run, in one implementation — including the `n*` front locator, interpolated in `log n`. |
-| `ancestry.py` | The exact deterministic ancestry kernel and the discrete Duhamel decomposition of the final composition into inherited and selection-driven parts. |
-| `figures.py` | The standard figure set plus CSV output. |
-| `plot_full_dump.py` | Standalone plotting for a `full_dump.csv` produced by `figures.py --dump`. |
-| `sweep_dx.py`, `sweep_dt.py` | Grid and timestep convergence sweeps. |
-| `test_regression.py` | Bit-identity check against the legacy stack — see the caveat below. |
-
-## Usage
-
-Modules put their own directory on `sys.path`, so they run from anywhere. From inside this
-directory:
+Every script puts its own directory on `sys.path`. Run them from the repository root:
 
 ```bash
 py -3.11 config.py
 ```
 
-Self-test: parameters, `n*`, regimes and a resolution estimate.
+This is a self-test: it prints the parameters, `n*`, the regimes and a resolution estimate.
+
+## Code
+
+| Module | Role |
+|---|---|
+| `config.py` | Single source of truth for parameters and regimes. |
+| `closures.py` | The physics: Monod growth, `q(rho)`, `D_col`, `D_self`, grid and boundary operators. No solver. |
+| `solver.py` | The only time-stepping loop. |
+| `diagnostics.py` | Everything measured from a run: `F1`, inverse-sorted fractions, the `n*` front, `F_ST`. |
+| `figures.py` | Runs the time-dependent model and writes the run figure, `summary.csv`, `timeseries.csv`, the profiles and `full_dump.csv`. `--replot RUNDIR` redraws a run figure from a run's CSVs and its `full_dump.csv`. |
+| `replot_run_from_dump.py` | Re-renders `run.png` for an existing run from its `full_dump.csv`. |
+| `plot_growth_maps.py`, `plot_fst.py` | Growth-rate maps and `F_ST(t)`. `figures.py` imports them. |
+| `steady_single_strain.py` | Direct Newton solve of the single-strain steady cavity, plus the steady-state sweeps (`--budget`, `--verify-lstar`, `--fold`, `--fold-params`). |
+| `plot_onset_law.py` | Validation of the onset amplitude law, including the `D_col'(0)` term. |
+| `plot_jammed_analytic.py` | Fully jammed analytic nutrient profile against the steady state. |
+| `check_cusp_prediction.py` | The cusp of the jamming fold from the pressure-plane quadrature. Gives `n0*`, `rho_c`, `c1`, `c3`, `kappa`. |
+| `ic_study.py` | Initial-condition dependence: seed density, seed composition, seeding mode, nutrient. |
+| `ancestry.py` | Neutral transport operator and kernel identities. Used by the kernel scripts. |
+| `adjoint_kernel.py` | The ancestry kernel by solving the adjoint equation. |
+| `plot_kernel_figures.py` | The eight kernel panels: `h` theory vs numerics, exposure criterion, kernel heatmaps. |
+| `plot_adjoint_convergence.py` | `h_sim` vs `h_theory` at several `dx`. |
+| `plot_production_maps.py` | Where biomass is produced, in space and time. |
+| `survival_origin.py`, `component_kernel.py` | Where the biomass still present at the final time was produced. |
+| `plot_survival_origin.py` | Plots the output of `survival_origin.py`. |
+| `plot_fst_vs_L.py` | Peak `F_ST` against cavity length, dilute vs jammed. |
+| `sweep_dx.py`, `sweep_dt.py` | Grid and time-step sweeps. |
+| `plot_conv_test.py` | Turns the four sweeps into the discretisation-error table. |
+| `plot_grid_convergence_T2000.py` | Grid convergence of the jammed van Leer runs at `t = 2000 h`. |
+| `plot_dnum_ratio.py` | Numerical label diffusivity of the unlimited scheme against `D_self`. |
+
+## Thesis figures and where they come from
+
+Output folders are named by their parameters. For example,
+`run_n0-15_L1000_dx0.5_T500_seed0.0001_lim-vanleer` is a run at:
+- `n0 = 15 µM`
+- `L = 1000 µm`
+- `dx = 0.5 µm`
+- `T = 500 h`
+- `rho_seed = 1e-4`
+- van Leer limiter
+
+| Figure (`thesis/`) | Produced by | Data in this repository |
+|---|---|---|
+| `steady_lstar_general`, `steady_lstar_dilute` | `steady_single_strain.py --verify-lstar` | `steady_sweeps/` |
+| `steady_budget` | `steady_single_strain.py --budget` | `steady_sweeps/` |
+| `steady_fold`, `steady_fold_params` | `steady_single_strain.py --fold` / `--fold-params` | `steady_sweeps/` |
+| `steady_closures`, `steady_density`, `steady_nutrient` | `steady_single_strain.py --n0 15 --L 1000 --dx 5` | `steady_n0-15_L1000_dx5/` |
+| `jammed_analytic_nutrient2`, `…3` | `plot_jammed_analytic.py steady_n0-1000_L1000_dx0.5` | `steady_n0-1000_L1000_dx0.5/` |
+| `onset_law_validation` | `plot_onset_law.py` | `onset_law_validation_*.csv` |
+| cusp constants in the text | `check_cusp_prediction.py` | printed |
+| `run_noise_dilute` | `figures.py`, `--n0 15 --T 96` | `run_n0-15_L1000_dx0.5_T96_seed0.0001_lim-vanleer/` ¹ |
+| `run` | `figures.py`, `--n0 1000 --T 6000`, re-rendered with `replot_run_from_dump.py` | `run_n0-1000_L1000_dx0.5_T6000_seed0.0001_lim-vanleer/` ¹ |
+| `run_dil1000`, `run_dildeath` | `figures.py`, `--n0 15 --T 1000` / `--T 12000` | `run_n0-15_L1000_dx0.5_T{1000,12000}_seed0.0001_lim-vanleer/` ¹ |
+| `frame_000000` | `figures.py` (`initial_state.png`) | `run_n0-15_L1000_dx0.5_T500_seed0.0001_lim-vanleer/` ¹ |
+| `h_theory_vs_numericdil`, `criteriondilute` | `adjoint_kernel.py --n0 15 --T 96`, then `plot_kernel_figures.py` | `adjoint_n0-15_L1000_dx0.5_T96_m30_d900_seed0.0001_traj-vanleer/` |
+| `kerneldilutemouth`, `kerneldilutedeep` | `adjoint_kernel.py --n0 15 --T 500`, then `plot_kernel_figures.py` | `adjoint_n0-15_L1000_dx0.5_T500_m30_d900_seed0.0001_traj-vanleer/` |
+| `h_theory_vs_numeric`, `criterioninversejam`, `kerneljam*` | `adjoint_kernel.py --n0 1000 --T 2000`, then `plot_kernel_figures.py` | `adjoint_n0-1000_L1000_dx0.5_T2000_m30_d900_seed0.0001_traj-vanleer/` |
+| `adjoint_convergence_overlay` | `plot_adjoint_convergence.py` | `adjoint_n0-1000_L1000_dx{0.5,1,2}_T2000_…/` |
+| `production_maps_*` | `plot_production_maps.py <run>` | the `T500` dilute and `T2000` jammed runs ¹ |
+| `survival_origindil`, `survival_originjam` | `survival_origin.py`, then `plot_survival_origin.py` | `survival_n0-15_L1000_dx0.5_T500_seed0.0001/`, `survival_n0-1000_L1000_dx0.5_T2000_seed0.0001/` |
+| `ic_density`, `ic_f1`, `ic_mode`, `ic_nutrient` | `ic_study.py --regime dilute --axis all --dx 5 --T 2000 --rho-seed 1e-4 --limiter vanleer` | `ic_study_n0-15_dx5_T2000_seed0.0001_lim-vanleer/` |
+| `ic_*_jam`, `ic_nutrient_jam2` | `ic_study.py --regime jammed --axis <axis> --dx 0.5 --T 2000 --rho-seed 1e-4 --limiter vanleer` | `ic_study_n0-1000_dx0.5_T2000_<axis>_full/` |
+| `fst_peak_vs_L` | `plot_fst_vs_L.py` | the `L100`–`L300` runs and the two `L1000` runs |
+| `grid_convergence_T2000` | `plot_grid_convergence_T2000.py` | `run_n0-1000_L1000_dx{0.25,0.5}_T2000_…/`, `dx{1,2}_T6000_…/` ¹ |
+| `dnum_over_dself` | `plot_dnum_ratio.py` | `run_n0-1000_L1000_dx2_T6000/`, `run_n0-1000_dx0.5_T10000/` ¹ |
+| discretisation-error table | `sweep_dx.py`, `sweep_dt.py`, then `plot_conv_test.py` | `conv_dx_*/`, `conv_dt_*/` |
+| `growthfactor` | `figures.py`, `--n0 1e6 --T 1000` (donor-cell, `rho_seed = 1e-6`) | `run_n0-1e+06_dx0.5_T1000/` ¹ |
+| `nogrowthfactor` | the earlier `src/` code, not part of this repository | — |
+
+¹ Reads the run's `full_dump.csv`, which is not included (about 110 MB per run). Re-run the run
+first. Every other figure regenerates from the repository alone.
+
+Runs are started with `figures.py`, for example:
 
 ```bash
-py -3.11 figures.py --regime dilute --dump
+py -3.11 figures.py --n0 15 --L 1000 --dx 0.5 --dt 0.05 --T 500 --rho-seed 1e-4 --limiter vanleer
 ```
 
-Run a regime and write the standard figures plus `full_dump.csv`.
+Once a run has its `full_dump.csv`, its figure can be redrawn without re-simulating:
 
 ```bash
-py -3.11 figures.py --n0 1000 --dx 0.5 --T 3000 --outdir jammed_run
+py -3.11 figures.py --replot run_n0-15_L1000_dx0.5_T500_seed0.0001_lim-vanleer
 ```
 
-Run an explicit parameter set into a named output directory.
+## What is not included
 
-```bash
-py -3.11 ancestry.py --check
-```
+Large files are regenerable and stay out of the repository:
+- `full_dump.csv`: about 110 MB per run at `dx = 0.5`, above GitHub's file limit.
+- Field stores (`*.npz`). The exception is the three behind the kernel figures (5–7 MB each),
+  which are included.
+- One 12.6 MB mass history.
 
-Verify the ancestry-kernel identities, then `--n0 15 --dx 10 --T 400` for a full kernel run.
+Rerun the command in the table above to recreate them.
 
-```bash
-py -3.11 sweep_dx.py
-```
-
-Grid convergence; `sweep_dt.py` does the same for the timestep.
-
-## Committed run outputs
-
-The `run_*/` and `sweep_*/` directories hold the outputs of previous runs — figures, summary CSVs
-and `full_dump.csv` snapshots — committed so results can be inspected without re-running. They are
-regenerable from the scripts above.
-
-## Caveat on `test_regression.py`
-
-This test compares the stack against the **legacy `src/` implementation**, which it locates as a
-sibling directory:
-
-```python
-OLD = os.path.join(os.path.dirname(HERE), "src")
-```
-
-That directory is not part of this repository, so the test will not run in a standalone clone. It
-is kept here as a record of how the rewrite was validated: at zero chemotaxis the old code path
-reduces to the same arithmetic, so the two are required to agree to exactly `0.0`, not merely to
-within a tolerance.
+`.gitignore` ignores every output folder by default and re-includes only the runs behind the
+thesis figures. To publish a new run, add a `!/<folder>/` line there.
