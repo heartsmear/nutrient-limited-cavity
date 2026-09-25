@@ -19,6 +19,7 @@ full_dump.csv
 # Per-timestep frame renders (--frames).
 frames/
 # Field and kernel stores written by adjoint_kernel.py and the kernel scripts.
+# The three behind the thesis kernel figures (5-7 MB each) are re-included below.
 *.npz
 # Single outputs above 10 MB.
 /run_n0-15_L1000_dx0.5_T12000_seed0.0001_lim-vanleer/mass_history.csv
@@ -94,3 +95,8 @@ frames/
 !/grid_convergence_T2000.png
 !/production_maps_dilute_n0-15_T500.png
 !/production_maps_jammed_n0-1000_T2000.png
+
+# kernel field stores behind the eight thesis kernel figures
+!/adjoint_n0-15_L1000_dx0.5_T96_m30_d900_seed0.0001_traj-vanleer/fields.npz
+!/adjoint_n0-15_L1000_dx0.5_T500_m30_d900_seed0.0001_traj-vanleer/fields.npz
+!/adjoint_n0-1000_L1000_dx0.5_T2000_m30_d900_seed0.0001_traj-vanleer/fields.npz
