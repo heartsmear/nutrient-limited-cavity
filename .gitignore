@@ -5,16 +5,92 @@ __pycache__/
 # LibreOffice / editor lock files
 .~lock.*#
 
-# Per-timestep frame renders from plot_full_dump.py --frames
-# (regenerable, and one run's sequence is ~27 MB)
-frames/
-
-# Full space-time dumps from figures.py --dump.  Regenerable, and they are large
-# enough to break the repo: at dx=0.5 a single one reaches 112 MB, above GitHub's
-# 100 MB per-file hard limit.  Summary, timeseries and profile CSVs are kept.
-full_dump.csv
-
 # OS junk
 Thumbs.db
 Desktop.ini
 .DS_Store
+
+# ---------------------------------------------------------------------------
+# Large files -- regenerable, and kept out of the repository
+# ---------------------------------------------------------------------------
+# Full space-time dumps written by figures.py (on by default).  At dx = 0.5 one
+# reaches ~110 MB, above GitHub's 100 MB per-file limit.
+full_dump.csv
+# Per-timestep frame renders (--frames).
+frames/
+# Field and kernel stores written by adjoint_kernel.py and the kernel scripts.
+*.npz
+# Single outputs above 10 MB.
+/run_n0-15_L1000_dx0.5_T12000_seed0.0001_lim-vanleer/mass_history.csv
+
+# ---------------------------------------------------------------------------
+# Run outputs.  Every output folder is ignored by default; the ones behind the
+# thesis figures and tables are re-included below.  To publish a new run, add a
+# "!/<folder>/" line here.
+# ---------------------------------------------------------------------------
+/run_*/
+/adjoint_*/
+/ancestry_*/
+/component_*/
+/contrib_surv_*/
+/survival_*/
+/ic_study_*/
+/steady_*/
+/conv_*/
+/sweep_*/
+/invasion_*/
+/fraction_study_*/
+/df_dip_*/
+/analysis/
+/*.png
+/*.csv
+
+# thesis outputs
+!/run_n0-1000_L1000_dx0.5_T6000_seed0.0001_lim-vanleer/
+!/run_n0-1000_L1000_dx0.5_T2000_seed0.0001_lim-vanleer/
+!/run_n0-1000_L1000_dx0.25_T2000_seed0.0001_lim-vanleer/
+!/run_n0-1000_L1000_dx1_T6000_seed0.0001_lim-vanleer/
+!/run_n0-1000_L1000_dx2_T6000_seed0.0001_lim-vanleer/
+!/run_n0-1000_L100_dx0.5_T3000_seed0.0001_lim-vanleer/
+!/run_n0-1000_L200_dx0.5_T3000_seed0.0001_lim-vanleer/
+!/run_n0-1000_L300_dx0.5_T3000_seed0.0001_lim-vanleer/
+!/run_n0-15_L1000_dx0.5_T96_seed0.0001_lim-vanleer/
+!/run_n0-15_L1000_dx0.5_T500_seed0.0001_lim-vanleer/
+!/run_n0-15_L1000_dx0.5_T1000_seed0.0001_lim-vanleer/
+!/run_n0-15_L1000_dx0.5_T12000_seed0.0001_lim-vanleer/
+!/run_n0-15_L100_dx0.5_T500_seed0.0001_lim-vanleer/
+!/run_n0-15_L200_dx0.5_T500_seed0.0001_lim-vanleer/
+!/run_n0-15_L300_dx0.5_T500_seed0.0001_lim-vanleer/
+!/run_n0-1000_L1000_dx2_T6000/
+!/run_n0-1000_dx0.5_T10000/
+!/run_n0-1e+06_dx0.5_T1000/
+!/adjoint_n0-1000_L1000_dx0.5_T2000_m30_d900_seed0.0001_traj-vanleer/
+!/adjoint_n0-1000_L1000_dx1_T2000_m30_d900_seed0.0001_traj-vanleer/
+!/adjoint_n0-1000_L1000_dx2_T2000_m30_d900_seed0.0001_traj-vanleer/
+!/adjoint_n0-15_L1000_dx0.5_T96_m30_d900_seed0.0001_traj-vanleer/
+!/adjoint_n0-15_L1000_dx0.5_T500_m30_d900_seed0.0001_traj-vanleer/
+!/survival_n0-15_L1000_dx0.5_T500_seed0.0001/
+!/survival_n0-1000_L1000_dx0.5_T2000_seed0.0001/
+!/ic_study_n0-15_dx5_T2000_seed0.0001_lim-vanleer/
+!/ic_study_n0-1000_dx0.5_T2000_density_full/
+!/ic_study_n0-1000_dx0.5_T2000_f1_full/
+!/ic_study_n0-1000_dx0.5_T2000_mode_full/
+!/ic_study_n0-1000_dx0.5_T2000_nutrient_full/
+!/steady_n0-15_L1000_dx5/
+!/steady_n0-1000_L1000_dx0.5/
+!/steady_sweeps/
+!/conv_dx_n0-1000_T1000/
+!/conv_dt_n0-1000_dx0.5_T1000/
+!/conv_dx_n0-15_T500/
+!/conv_dt_n0-15_dx0.5_T500/
+
+# thesis figures written to the repository root by the plot scripts
+!/onset_law_validation.png
+!/onset_law_validation_curves.csv
+!/onset_law_validation_collapse.csv
+!/adjoint_convergence_overlay.png
+!/dnum_over_dself.png
+!/fst_peak_vs_L.png
+!/grid_convergence_T2000.png
+!/production_maps_dilute_n0-15_T500.png
+!/production_maps_jammed_n0-1000_T2000.png
