@@ -1,0 +1,29 @@
+=== initial-condition dependence ===
+  regime=jammed  n0=1000 uM  dx=0.5 um  dt=0.05 h  T=2000 h  n*=5.2526 uM
+  baseline: seed_f1=0.5, rho_mode=opening_gaussian, rho_seed=0.0001, nutrient_mode=filled, label_limiter=vanleer
+  outdir: src2/ic_study_n0-1000_dx0.5_T2000_mode_full
+
+  unit-amplitude inoculum mass by geometry:
+    opening_gaussian       44.84 um     1.00x
+    uniform              1000.00 um    22.30x
+    deep_gaussian         200.51 um     4.47x
+    NOTE: --match-mass is OFF, so the `mode` axis varies geometry AND inoculum size together.
+
+--- axis: mode  (rho_mode) ---
+             value   rho_seed  rho/rjam    F1_min   F1_fin   df_max   Imouth    Ideep  adm      s
+          invasion     0.0001    1.0302 3.238e-05   0.3229   0.8807     68.1   1611.1    T   3381
+                    warn: strain_extinction
+           uniform     0.0001    1.0302 6.179e-04   0.3370   0.8758     70.3   1592.4    T   3386
+                    warn: strain_extinction
+              deep     0.0001    1.0302 1.813e-04   0.3106   0.8846     66.7   1631.9    T   3362
+                    warn: strain_extinction
+  wrote ic_mode.png
+
+wrote src2/ic_study_n0-1000_dx0.5_T2000_mode_full\ic_study.csv
+wrote src2/ic_study_n0-1000_dx0.5_T2000_mode_full\ic_series.csv
+wrote src2/ic_study_n0-1000_dx0.5_T2000_mode_full\ic_profiles.csv
+wrote src2/ic_study_n0-1000_dx0.5_T2000_mode_full\ic_summary.png
+
+=== how much does each initial condition matter? ===
+    (spread over the axis, USABLE rows only: F1 turned and admissible)
+  mode      delta_f_max +0.8758 .. +0.8846   (spread   1.0% of max)   F1_final 0.3106 .. 0.3370

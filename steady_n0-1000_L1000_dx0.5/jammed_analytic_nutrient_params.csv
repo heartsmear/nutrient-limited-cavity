@@ -1,0 +1,16 @@
+quantity,value
+mu_per_h,0.78
+Ks_uM,15
+n0_uM,1000
+Y,2.895e-07
+Dn,1200000
+L_um,1000
+rho_j,0.6593913729
+rho_j_source,rho(L)
+k_mu_over_Ks,0.052
+kappa_j_per_um,0.3141654304
+tail_amplitude_A_uM,5216642.586
+noise_floor_uM,1e-12
+x_n_eq_Ks_um,39.75
+x_trust_max_um,137.25
+x_rho_plateau_um,28.75

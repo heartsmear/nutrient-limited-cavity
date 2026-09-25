@@ -1,0 +1,5 @@
+quantity,value
+theta_ref_panel_b,0.5
+Ks_uM,15
+n0_crit_uM,782.1027039
+closed_form_vs_integral_err,2.124132e-16

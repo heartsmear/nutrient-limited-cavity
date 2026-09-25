@@ -1,0 +1,10 @@
+quantity,value
+n0_main_uM,1500
+n0_crit_uM,782.1027039
+rho_jam,0.64
+window_L_lo_um,37.68713672
+window_L_hi_um,38.3404357
+n0_star_cusp_uM,896.1652823
+n0_star_bisection_uM,896.1650266
+alpha_width,1.487230973
+alpha_drho,0.4966129373
