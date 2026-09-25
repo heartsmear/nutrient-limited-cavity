@@ -18,6 +18,7 @@ Two corrections relative to `src/`:
 """
 from __future__ import annotations
 
+import math
 from typing import Dict, Optional
 
 import numpy as np
@@ -127,6 +128,76 @@ def delta_f_series(res: Dict, p: ModelParams) -> np.ndarray:
     return d
 
 
+def fst_series(res: Dict, p: ModelParams, min_sd_max: float = 0.05):
+    """Wright's fixation index per frame: how much SPATIAL structure the composition carries.
+
+    F_ST = Var_rho(f) / [<f>_rho (1 - <f>_rho)] = Var_rho(h) / (1 - <h>_rho^2),
+
+    biomass-weighted, bounded in [0,1]: 0 when f is spatially uniform (however far the global
+    mean has drifted), 1 when every occupied cell is pure (f in {0,1}).  The denominator is the
+    largest variance attainable at that mean -- and is exactly the (1 - h^2) factor of the
+    selection source -- so F_ST measures the fraction of ACHIEVABLE structure that is realised.
+
+    WHY NOT delta_f.  `delta_f_series` is a two-zone CONTRAST, <f>_{n>n*} - <f>_{n<n*}.  It is the
+    right quantity for inverse sorting (it is signed, and says which way the zones differ) but it
+    is not a homogeneity measure: it vanishes whenever the two zone averages coincide, no matter
+    how structured the profile is inside them.  Measured at the delta_f zero-crossings of four
+    cavities, delta_f was ~1e-4 in all of them while F_ST spanned 5e-6 to 9e-3.
+
+    RETURNS (fst, sd, sd_max, mean_f), all per frame.  Read them together:
+
+      * F_ST is a VARIANCE ratio, so sqrt(F_ST) is the amplitude -- the realised sd as a fraction
+        of the largest possible.  F_ST = 0.14 means sd is 37% of sd_max, which is not "small".
+      * F_ST is 0/0 in the fixation limit: as F1 -> 1 both Var and <f>(1-<f>) vanish, so the ratio
+        is ill-conditioned exactly where the dilute cavity ends up.  Frames with
+        sd_max < `min_sd_max` are returned as NaN rather than as a plausible-looking number; use
+        the raw `sd` there, which is always well-conditioned.
+      * It is TIME-DEPENDENT and must not be collapsed to one value.  Quote the peak with its
+        time and the late slope: a dilute cavity peaks near 0.14 and loses ~89% in 800 h, a jammed
+        one peaks near 0.90 and loses ~20% in 8600 h.  Reading either at the final frame alone
+        understates it.
+    """
+    R1, R2 = res["rho1_profiles"], res["rho2_profiles"]
+    nt = R1.shape[1]
+    fst = np.full(nt, np.nan); sd = np.zeros(nt)
+    sdmax = np.zeros(nt); fbar = np.full(nt, np.nan)
+    for j in range(nt):
+        r1, r2 = R1[:, j], R2[:, j]
+        rho = r1 + r2
+        occ = rho > 1e-9 * max(rho.max(), 1e-30)
+        if occ.sum() < 2 or rho[occ].sum() <= 0:
+            continue
+        f = r1[occ] / rho[occ]
+        w = rho[occ] / rho[occ].sum()
+        m = float((w * f).sum())
+        var = float((w * (f - m) ** 2).sum())
+        den = m * (1.0 - m)
+        fbar[j] = m; sd[j] = math.sqrt(max(var, 0.0)); sdmax[j] = math.sqrt(max(den, 0.0))
+        if sdmax[j] >= min_sd_max:
+            fst[j] = var / den
+    return fst, sd, sdmax, fbar
+
+
+def fst_summary(res: Dict, p: ModelParams, min_sd_max: float = 0.05) -> Dict[str, float]:
+    """(peak, t_peak, final, late slope) -- the three numbers F_ST must be quoted as."""
+    fst, sd, sdmax, _ = fst_series(res, p, min_sd_max)
+    t = res["t"]
+    ok = np.isfinite(fst)
+    out = dict(F_ST_peak=float("nan"), t_F_ST_peak=float("nan"), F_ST_final=float("nan"),
+               dF_ST_per_1000h_late=float("nan"), F_ST_frames_valid=int(ok.sum()),
+               sd_f_final=float(sd[-1]))
+    if not ok.any():
+        return out
+    i = int(np.nanargmax(fst))
+    out["F_ST_peak"] = float(fst[i]); out["t_F_ST_peak"] = float(t[i])
+    fin = np.where(ok)[0][-1]
+    out["F_ST_final"] = float(fst[fin])
+    late = ok & (t >= t[0] + 0.9 * (t[-1] - t[0]))
+    if late.sum() >= 2:
+        out["dF_ST_per_1000h_late"] = float(np.polyfit(t[late], fst[late], 1)[0]) * 1000.0
+    return out
+
+
 def masses(res: Dict):
     """(M1, M2) per frame: sum(rho_i) * dx, in packing-fraction * um."""
     dx = res["dx"]
@@ -226,6 +297,14 @@ def validate(res: Dict, p: ModelParams, verbose: bool = True) -> Dict[str, objec
         "advection_substep_cap": (res.get("adv_capped_steps", 0) > 0,
                                   f"{res.get('adv_capped_steps', 0)} steps hit the "
                                   f"{res.get('adv_substeps_max', 0)}-substep cap -- CFL not honoured"),
+        # F1 bottoming out AT the final frame means the composition never turned around, so the
+        # run cannot support ANY statement about the phenomenon -- present or absent.  Reading a
+        # still-falling run as "no inverse sorting" is a real error this catches: n0=10000 at
+        # T=1000 and n0=1000/L=300 at T=120 both report delta_f = 0 for exactly this reason.
+        "F1_never_turned": (float(t[int(np.argmin(F1))]) >= 0.98 * float(t[-1]) and len(t) > 2,
+                            f"F1 minimum is at t={t[int(np.argmin(F1))]:.0f} h = the end of the "
+                            f"run (T={t[-1]:.0f} h): still falling, so delta_f/inv_* are "
+                            f"LOWER BOUNDS, not measurements.  Extend T before concluding."),
         "not_steady": (np.isfinite(drho_late) and abs(drho_late) > 1e-3,
                        f"d rho/dt over the last 10% = {drho_late:+.3e} per 1000 h "
                        f"(dF1/dt = {dF1_late:+.3e}) -- still transient"),
@@ -243,8 +322,10 @@ def validate(res: Dict, p: ModelParams, verbose: bool = True) -> Dict[str, objec
                F1_final=float(F1[-1]), F1_min=float(F1.min()),
                delta_f_max=float(df.max()), delta_f_final=float(df[-1]),
                t_F1_min=float(t[int(np.argmin(F1))]),
+               F1_turned=bool(float(t[int(np.argmin(F1))]) < 0.98 * float(t[-1])),
                int_inv_deep=int_deep, int_inv_mouth=int_mouth,
                dF1_per_1000h_late=dF1_late, drho_per_1000h_late=drho_late,
+               **fst_summary(res, p),
                f_min=res.get("f_min", float("nan")), f_max=res.get("f_max", float("nan")),
                adv_substeps_max=res.get("adv_substeps_max", 0),
                adv_capped_steps=res.get("adv_capped_steps", 0),
@@ -255,12 +336,16 @@ def validate(res: Dict, p: ModelParams, verbose: bool = True) -> Dict[str, objec
               f"rho_peak={out['rho_peak']:.4f} (rho/rho_jam={out['rho_max_over_jam']:.3f})")
         print(f"  lambda_front={out['lambda_front']:.2f} um  dx={dx:g}  "
               f"dx/lambda={dol:.2f}   q_min={out['q_min']:.4f}")
-        print(f"  F1 {out['F1_min']:.4g} (t={out['t_F1_min']:.0f} h) -> {out['F1_final']:.4f}   "
+        print(f"  F1 {out['F1_min']:.4g} (t={out['t_F1_min']:.0f} h"
+              f"{'' if out['F1_turned'] else ', STILL FALLING'}) -> {out['F1_final']:.4f}   "
               f"delta_f {out['delta_f_max']:+.4f} max / {out['delta_f_final']:+.4f} final")
         print(f"  int_inv_mouth={int_mouth:.1f}  int_inv_deep={int_deep:.1f}   "
               f"f in [{out['f_min']:.4g}, {out['f_max']:.4g}]   "
               f"adv_substeps_max={out['adv_substeps_max']}")
         print(f"  late slope per 1000 h:  dF1={dF1_late:+.3e}   drho={drho_late:+.3e}")
+        print(f"  F_ST peak={out['F_ST_peak']:.4f} (t={out['t_F_ST_peak']:.0f} h) -> "
+              f"final={out['F_ST_final']:.4f}   slope={out['dF_ST_per_1000h_late']:+.3e}/1000h   "
+              f"sd(f)={out['sd_f_final']:.4f}")
         for k in checks:
             failed, detail = checks[k]
             if failed:

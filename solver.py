@@ -303,6 +303,14 @@ def simulate(L: float, p: ModelParams, num: Numerics, ic: InitialConditions,
     NN = np.zeros((N, n_saved)); tt = np.zeros(n_saved)
     scalar_hist: List[Dict[str, float]] = []
 
+    # Per-STEP strain masses.  The saved frames are n_save points over T, so on a long jammed run
+    # that is a 25 h grid -- far too coarse to see the early washout dip of M1 (it bottoms at
+    # t ~ 1.6 h), which is exactly the quantity the one-cell extinction test needs.  Profiles at
+    # every step are unaffordable (2000 cells x 120000 steps), three scalars are not: 2.9 MB.
+    mass_hist = np.full((n_steps + 1, 3), np.nan)
+    mass_hist[0] = (0.0, float(rho1.sum()) * dx, float(rho2.sum()) * dx)
+    mass_filled = 1
+
     rho_peak = float(np.max(rho1 + rho2))
     q_min = 1.0
     f_min, f_max = 1.0, 0.0            # positivity of the FRACTION: must stay in [0,1]
@@ -333,6 +341,9 @@ def simulate(L: float, p: ModelParams, num: Numerics, ic: InitialConditions,
         if not (np.all(np.isfinite(rho1)) and np.all(np.isfinite(rho2)) and np.all(np.isfinite(n))):
             success, message = False, f"non-finite value at step {step}, t={t:g} h"
             break
+
+        mass_hist[step] = (t, float(rho1.sum()) * dx, float(rho2.sum()) * dx)
+        mass_filled = step + 1
 
         rho_peak = max(rho_peak, float(diag["max_rho"]))
         # f in [0,1] is an invariant of the scheme; src/ tracked it and src2 had lost it.
@@ -379,6 +390,8 @@ def simulate(L: float, p: ModelParams, num: Numerics, ic: InitialConditions,
         "rho1_profiles": R1, "rho2_profiles": R2, "n_profiles": NN,
         "rho1_final": rho1, "rho2_final": rho2, "n_final": n,
         "history_rows": scalar_hist,
+        # (t, M1, M2) at EVERY step, truncated to what was actually integrated if the run broke.
+        "mass_history": mass_hist[:mass_filled],
         # IC provenance, so summary.csv records WHICH run this was, not just its parameters.
         "rho_mode": ic.rho_mode, "fraction_mode": ic.fraction_mode,
         "nutrient_mode": ic.nutrient_mode, "seed_f1": ic.seed_f1,

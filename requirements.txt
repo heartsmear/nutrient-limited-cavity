@@ -1,0 +1,5 @@
+# Python 3.11.  Versions used for the thesis runs and figures.
+numpy==2.4.4
+scipy==1.17.1
+matplotlib==3.10.9
+pandas==3.0.2

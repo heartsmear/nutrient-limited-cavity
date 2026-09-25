@@ -14,7 +14,11 @@ WHAT CHANGED vs src/:
 
     py -3.11 src2/figures.py --regime dilute
     py -3.11 src2/figures.py --n0 1000 --dx 0.5 --T 3000 --outdir jammed_run
-    py -3.11 src2/figures.py --regime dilute --dump          # also write full_dump.csv
+    py -3.11 src2/figures.py --regime dilute --no-dump       # skip full_dump.csv (on by default)
+    py -3.11 src2/figures.py --replot <rundir> [--outdir D]  # redraw from CSVs, simulate nothing
+
+EVERY PLOTTED ARRAY IS ON DISK AS CSV: run.png draws from profile_final.csv, timeseries.csv,
+full_dump.csv and run_monod.csv; initial_state.png from initial_state.csv; fst.png from fst.csv.
 """
 from __future__ import annotations
 
@@ -43,6 +47,13 @@ import diagnostics as D                                           # noqa: E402
 
 C1, C2, CN = "#1f77b4", "#d62728", "#2ca02c"
 _trapz = getattr(np, "trapezoid", None) or np.trapz
+
+#: Below this nutrient concentration the solve is not trustworthy -- the implicit nutrient step
+#: is driven by differences of numbers ~n0, so once n falls ~15 decades below the feed the
+#: profile is rounding noise, not a solution.  It is NOT a hard floor: nothing is clipped, the
+#: value is used only to SHADE the affected region of the log-scale nutrient panel so the figure
+#: says what the draft's captions already assert in words.
+N_NOISE_FLOOR = 1.0e-12
 
 
 # =============================================================================
@@ -167,9 +178,26 @@ def figure_run(res, p, path):
     a.set_title("(B) final composition", fontsize=10)
 
     a = ax[0, 2]
-    a.semilogy(x, np.maximum(nf, 1e-20), color=CN, lw=1.8)
+    # Draw the whole profile faded, then overplot only the trustworthy stretch solid, so the
+    # curve itself shows where it stops being a solution.  Nothing is clipped or altered.
+    _np = np.maximum(nf, 1e-20)
+    _ok = _np >= N_NOISE_FLOOR
+    a.semilogy(x, _np, color=CN, lw=1.1, ls=":", alpha=0.45)
+    a.semilogy(x, np.where(_ok, _np, np.nan), color=CN, lw=1.8)
     a.axhline(nstar, color="k", ls="--", lw=1.2)
     a.axhline(p.n0, color="0.6", ls=":", lw=.9)
+    _lo = a.get_ylim()[0]
+    if _lo < N_NOISE_FLOOR:
+        a.axhspan(_lo, N_NOISE_FLOOR, color="0.75", alpha=0.35, lw=0, zorder=0)
+        a.axhline(N_NOISE_FLOOR, color="0.35", ls="-.", lw=1.0, zorder=1)
+        a.text(0.02, 0.02, "numerical noise:  $n<10^{-12}$ $\\mu$M\n(profile not trustworthy)",
+               transform=a.transAxes, ha="left", va="bottom", fontsize=7.5, color="0.25",
+               bbox=dict(fc="white", ec="0.7", lw=.6, alpha=.8))
+        if (~_ok).any():                      # where the profile first enters the noise floor
+            _xn = float(x[int(np.argmax(~_ok))])
+            a.axvline(_xn, color="0.45", ls="-.", lw=0.9, zorder=1)
+            a.annotate(r"$n<10^{-12}$ beyond %.0f $\mu$m" % _xn, xy=(_xn, N_NOISE_FLOOR),
+                       xytext=(6, 10), textcoords="offset points", fontsize=7.5, color="0.3")
     a.text(.985, .955, rf"$n_0$={p.n0:g} $\mu$M" "\n" rf"$n^\ast$={nstar:.2f} $\mu$M",
            transform=a.transAxes, ha="right", va="top", fontsize=8,
            bbox=dict(fc="white", ec="0.8", lw=.6, alpha=.85))
@@ -264,6 +292,16 @@ def figure_run(res, p, path):
     fig.tight_layout(rect=(0, 0.005, 1, 0.965))
     fig.savefig(path, dpi=150); plt.close(fig)
 
+    # Panel (D) is the only one drawn from arrays that exist nowhere else: the Monod curves are
+    # evaluated here, not saved by the run.  Every other panel is in the run's own CSVs --
+    # (A)-(C) profile_final.csv, (E)-(G) timeseries.csv, (H)-(I) full_dump.csv (f1, n) -- so
+    # `figures.py --replot <rundir>` redraws the whole figure without simulating.
+    with open(os.path.splitext(path)[0] + "_monod.csv", "w", newline="") as fh:
+        w = csv.writer(fh)
+        w.writerow(["n_uM", "g1_per_h", "g2_per_h", "n_star_uM"])
+        for k in range(ng.size):
+            w.writerow([f"{ng[k]:.8g}", f"{gg1[k]:.10g}", f"{gg2[k]:.10g}", f"{nstar:.10g}"])
+
 
 def figure_initial_state(res, p, ic, path):
     x = res["x"]
@@ -282,6 +320,13 @@ def figure_initial_state(res, p, ic, path):
     fig.suptitle(rf"initial state: {ic.rho_mode}, $\rho_{{\rm seed}}$={ic.rho_seed:g}, "
                  rf"seed $f_1$={ic.seed_f1:g}, {ic.nutrient_mode}", fontweight="bold")
     fig.tight_layout(); fig.savefig(path, dpi=150); plt.close(fig)
+    # the arrays drawn, unclipped (the log panel floors them at 1e-30 for display only)
+    with open(os.path.splitext(path)[0] + ".csv", "w", newline="") as fh:
+        w = csv.writer(fh)
+        w.writerow(["x_um", "rho1", "rho2", "rho", "f1", "n_uM"])
+        for i in range(x.size):
+            w.writerow([f"{x[i]:.6g}", f"{rho0[i] * f0[i]:.10g}", f"{rho0[i] * (1 - f0[i]):.10g}",
+                        f"{rho0[i]:.10g}", f"{f0[i]:.8g}", f"{n0[i]:.10g}"])
 
 
 # =============================================================================
@@ -507,7 +552,53 @@ def figure_profiles_all(res, p, F, path, stride=1):
 # =============================================================================
 # CSV output
 # =============================================================================
-def write_csvs(outdir, res, p, val, dump=False, F=None):
+def figure_fst(res, p, path):
+    """F_ST(t) with the raw sd beside it, and the conditioning floor made visible.
+
+    Two panels because F_ST alone is not safe to read: it is 0/0 in the fixation limit, so the
+    right-hand panel shows sd(f) against sd_max = sqrt(<f>(1-<f>)).  Where sd_max approaches the
+    floor the ratio is meaningless and F_ST is drawn broken rather than plausible.
+    """
+    fst, sd, sdmax, fbar = D.fst_series(res, p)
+    t = res["t"]
+    summ = D.fst_summary(res, p)
+
+    fig, ax = plt.subplots(1, 2, figsize=(11.4, 4.2))
+    ax[0].plot(t, fst, color=C1, lw=2.2)
+    if np.isfinite(summ["F_ST_peak"]):
+        ax[0].plot([summ["t_F_ST_peak"]], [summ["F_ST_peak"]], "o", color=C1, ms=8,
+                   mfc="none", mew=1.8,
+                   label=f"peak {summ['F_ST_peak']:.3f} at t={summ['t_F_ST_peak']:.0f} h")
+        ax[0].legend(frameon=False, fontsize=9)
+    for lv, lab in ((0.05, "little"), (0.15, "great")):
+        ax[0].axhline(lv, color="0.75", lw=0.8, ls=":")
+        ax[0].annotate(lab, (t[-1], lv), fontsize=7.5, color="0.55", va="bottom", ha="right")
+    ax[0].set(xlabel="t [h]", ylabel=r"$F_{ST}$", ylim=(0, None))
+    ax[0].set_title("spatial structure of the composition", fontsize=10, loc="left")
+
+    ax[1].plot(t, sd, color=C1, lw=2.2, label=r"sd$(f)$ realised")
+    ax[1].plot(t, sdmax, color="0.55", lw=1.6, ls="--", label=r"sd$_{\max}=\sqrt{f(1-f)}$")
+    ax[1].axhline(0.05, color=C2, lw=1.0, ls=":", label="conditioning floor")
+    ax[1].set(xlabel="t [h]", ylabel="composition spread")
+    ax[1].set_title(r"$F_{ST}$ is their squared ratio", fontsize=10, loc="left")
+    ax[1].legend(frameon=False, fontsize=8.5)
+    for A in ax:
+        A.grid(alpha=0.25, lw=0.6)
+    fig.tight_layout()
+    fig.savefig(path, dpi=150); plt.close(fig)
+
+    # fst.csv: the arrays both panels draw.  The --fst help text always promised this file; until
+    # 2026-09-23 only the PNG was written.
+    with open(os.path.splitext(path)[0] + ".csv", "w", newline="") as fh:
+        w = csv.writer(fh)
+        w.writerow(["t_h", "F_ST", "sd_f", "sd_f_max", "f_bar"])
+        for k in range(len(t)):
+            w.writerow([f"{t[k]:.6g}", f"{fst[k]:.8g}", f"{sd[k]:.8g}", f"{sdmax[k]:.8g}",
+                        f"{fbar[k]:.8g}"])
+    return path
+
+
+def write_csvs(outdir, res, p, val, dump=False, F=None, fst=False, num=None):
     x, t, dx = res["x"], res["t"], res["dx"]
     R1, R2, NN = res["rho1_profiles"], res["rho2_profiles"], res["n_profiles"]
     nstar = float(C.monod_crossover(p))
@@ -518,8 +609,10 @@ def write_csvs(outdir, res, p, val, dump=False, F=None):
 
     with open(os.path.join(outdir, "timeseries.csv"), "w", newline="") as fh:
         w = csv.writer(fh)
+        fs, fsd, fsm, _fb = D.fst_series(res, p)
         w.writerow(["t_h", "F1", "inv_mouth", "inv_deep", "delta_f", "x_nstar_um",
-                    "rho_max", "rho_max_over_jam", "M1", "M2", "dx_over_lambda"])
+                    "rho_max", "rho_max_over_jam", "M1", "M2", "dx_over_lambda",
+                    "F_ST", "sd_f", "sd_f_max"])
         for j in range(len(t)):
             rho = R1[:, j] + R2[:, j]
             r = D.front_resolution(x, NN[:, j], nstar, dx)["dx_over_lambda"]
@@ -527,7 +620,9 @@ def write_csvs(outdir, res, p, val, dump=False, F=None):
                         f"{df[j]:.8g}", "" if not np.isfinite(xf[j]) else f"{xf[j]:.6g}",
                         f"{rho.max():.8g}", f"{rho.max()/p.rho_jam:.8g}",
                         f"{M1[j]:.8g}", f"{M2[j]:.8g}",
-                        "" if not np.isfinite(r) else f"{r:.6g}"])
+                        "" if not np.isfinite(r) else f"{r:.6g}",
+                        "" if not np.isfinite(fs[j]) else f"{fs[j]:.8g}",
+                        f"{fsd[j]:.8g}", f"{fsm[j]:.8g}"])
 
     with open(os.path.join(outdir, "profile_final.csv"), "w", newline="") as fh:
         w = csv.writer(fh)
@@ -539,6 +634,35 @@ def write_csvs(outdir, res, p, val, dump=False, F=None):
             w.writerow([f"{x[i]:.6g}", f"{r1[i]:.10g}", f"{r2[i]:.10g}", f"{rho[i]:.10g}",
                         f"{f1[i]:.8g}", f"{NN[i, -1]:.10g}"])
 
+    # biomass in CELLS: M_i [um] * A [um^2] / V [um^3].  A is an ANALYSIS parameter (the chamber
+    # cross-section), not part of the 1D equations -- if it is absent these come out blank.
+    _A = res.get("cross_section_um2"); _V = res.get("cell_volume_um3")
+    if _A and _V:
+        _c1, _c2 = M1 * _A / _V, M2 * _A / _V
+        _mn1, _mn2 = float(_c1.min()), float(_c2.min())
+        _tm1 = float(t[int(np.argmin(_c1))])
+        _nbelow = int(((_c1 < 1.0) | (_c2 < 1.0)).sum())
+    else:
+        _mn1 = _mn2 = _tm1 = _nbelow = ""
+
+    # Same quantities on the PER-STEP mass history.  The frame-based ones above are a minimum over
+    # n_save points -- on the jammed run a 25 h grid, which steps clean over the t ~ 1.6 h washout
+    # dip and reports the seed as the minimum.  Kept side by side so the difference is visible.
+    _MH = res.get("mass_history")
+    _sm1 = _sm2 = _stm1 = _sbelow = ""
+    if _MH is not None and len(_MH) and _A and _V:
+        _st, _sM1, _sM2 = _MH[:, 0], _MH[:, 1], _MH[:, 2]
+        _sc1, _sc2 = _sM1 * _A / _V, _sM2 * _A / _V
+        _sm1, _sm2 = float(_sc1.min()), float(_sc2.min())
+        _stm1 = float(_st[int(np.argmin(_sc1))])
+        _sbelow = int(((_sc1 < 1.0) | (_sc2 < 1.0)).sum())
+        with open(os.path.join(outdir, "mass_history.csv"), "w", newline="") as fh:
+            w = csv.writer(fh)
+            w.writerow(["t_h", "M1", "M2", "cells1", "cells2"])
+            for _k in range(len(_st)):
+                w.writerow([f"{_st[_k]:.6g}", f"{_sM1[_k]:.10g}", f"{_sM2[_k]:.10g}",
+                            f"{_sc1[_k]:.8g}", f"{_sc2[_k]:.8g}"])
+
     rows = [("n0_uM", p.n0), ("n_star_uM", nstar), ("mu1", p.mu1), ("Ks1", p.Ks1),
             ("mu2", p.mu2), ("Ks2", p.Ks2), ("Y", p.Y), ("Dn", p.Dn), ("D0", p.D0),
             ("rho_jam", p.rho_jam), ("rho_c", p.rho_c), ("rho_max", p.rho_max),
@@ -546,10 +670,28 @@ def write_csvs(outdir, res, p, val, dump=False, F=None):
             ("Dself_jam_slope", p.Dself_jam_slope),
             ("rho_mode", res.get("rho_mode", "")), ("fraction_mode", res.get("fraction_mode", "")),
             ("nutrient_mode", res.get("nutrient_mode", "")), ("seed_f1", res.get("seed_f1", "")),
+            ("rho_seed", res.get("rho_seed", "")),
+            ("cross_section_um2", res.get("cross_section_um2", "")),
+            ("cell_volume_um3", res.get("cell_volume_um3", "")),
+            ("inoculum_cells", res.get("inoculum_cells", "")),
+            ("min_cells1", _mn1), ("min_cells2", _mn2),
+            ("t_min_cells1_h", _tm1), ("frames_below_one_cell", _nbelow),
+            ("min_cells1_perstep", _sm1), ("min_cells2_perstep", _sm2),
+            ("t_min_cells1_perstep_h", _stm1), ("steps_below_one_cell", _sbelow),
             ("L_um", res["L"]), ("dx_um", dx), ("N", res["N"]), ("dt_h", res["dt"]),
             ("T_end_h", t[-1]),
+            # Scheme provenance.  Until 2026-09-21 summary.csv recorded rho_seed but NOT the
+            # limiter, so an untagged folder was ambiguous about the one setting that changes
+            # the label transport -- referee M4 ("the scheme behind each figure is ambiguous").
+            # The CFL evidence M4 also asked for is already below as adv_substeps_max /
+            # adv_capped_steps (from the validator, which sees EVERY step -- do not recompute
+            # them from history_rows, which is frame-sampled and understates the max ~10x).
+            # These three record the settings those numbers should be read against.
+            ("label_limiter", getattr(num, "label_limiter", "")),
+            ("advection_cfl", getattr(num, "advection_cfl", "")),
+            ("max_advection_substeps", getattr(num, "max_advection_substeps", "")),
             ("F1_final", val["F1_final"]), ("F1_min", val["F1_min"]),
-            ("t_F1_min_h", val["t_F1_min"]),
+            ("t_F1_min_h", val["t_F1_min"]), ("F1_turned", val["F1_turned"]),
             ("delta_f_max", val["delta_f_max"]), ("delta_f_final", val["delta_f_final"]),
             ("int_inv_mouth", val["int_inv_mouth"]), ("int_inv_deep", val["int_inv_deep"]),
             ("peak_inv_mouth", float(mo.max())), ("peak_inv_deep", float(dp.max())),
@@ -608,9 +750,68 @@ def write_csvs(outdir, res, p, val, dump=False, F=None):
 
 
 # =============================================================================
+# --replot: redraw a finished run from its own CSVs, simulating nothing
+# =============================================================================
+#: ModelParams fields that summary.csv records.  Anything else the run used is a dataclass default.
+_SUMMARY_PARAMS = ("mu1", "Ks1", "mu2", "Ks2", "Y", "Dn", "D0", "rho_jam", "rho_c", "rho_max",
+                   "Dself_floor", "Dself_jam_slope")
+
+
+def replot(rundir, outdir):
+    """Redraw run.png and initial_state.png (and fst.png if the run wrote fst.csv) from CSVs.
+
+    Needs summary.csv and full_dump.csv, i.e. any run made since the dump became the default.
+    The figures come out of the same `figure_*` functions as a live run, so a restyle is a
+    seconds-long redraw, not a rerun.  The only difference from the live figure is the dump's
+    10-significant-figure rounding, which is invisible at any plotted scale.
+    """
+    from dataclasses import replace as _replace
+    import plot_growth_maps as _G                  # streaming dump reader (read_columns)
+
+    S = {r[0]: r[1] for r in csv.reader(open(os.path.join(rundir, "summary.csv"))) if len(r) >= 2}
+    dump = os.path.join(rundir, "full_dump.csv")
+    if not os.path.exists(dump):
+        raise SystemExit(f"--replot needs {dump}; this run was made without the dump, so its "
+                         f"space-time panels exist only as pixels and it must be re-run.")
+    kw = {k: float(S[k]) for k in _SUMMARY_PARAMS if S.get(k, "") not in ("", None)}
+    if S.get("dself_shape"):
+        kw["dself_shape"] = S["dself_shape"]
+    p = config.params(float(S["n0_uM"]), **kw)
+    ns_saved, ns_now = float(S["n_star_uM"]), float(C.monod_crossover(p))
+    if abs(ns_now - ns_saved) > 1e-9 * max(1.0, abs(ns_saved)):
+        raise SystemExit(f"parameter reconstruction failed: n* = {ns_now:.10g}, run had "
+                         f"{ns_saved:.10g}")
+
+    ic_kw = {k: S[k] for k in ("rho_mode", "fraction_mode", "nutrient_mode") if S.get(k)}
+    for k in ("seed_f1", "rho_seed"):
+        if S.get(k, "") not in ("", None):
+            ic_kw[k] = float(S[k])
+    ic = config.initial_conditions(**ic_kw)
+
+    print(f"  reading {dump} ...", flush=True)
+    t, x, col = _G.read_columns(dump, ("rho1", "rho2", "n"))
+    L = float(S["L_um"])
+    res = dict(x=x, t=t, dx=float(S["dx_um"]), L=L, N=int(float(S["N"])),
+               rho1_profiles=col["rho1"], rho2_profiles=col["rho2"], n_profiles=col["n"],
+               rho_peak=float(S["rho_peak"]))
+    os.makedirs(outdir, exist_ok=True)
+    out = [os.path.join(outdir, "run.png"), os.path.join(outdir, "initial_state.png")]
+    figure_run(res, p, out[0])
+    figure_initial_state(res, p, ic, out[1])
+    if os.path.exists(os.path.join(rundir, "fst.csv")):
+        out.append(os.path.join(outdir, "fst.png"))
+        figure_fst(res, p, out[-1])
+    return out
+
+
+# =============================================================================
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--replot", default=None, metavar="RUNDIR",
+                    help="simulate nothing: redraw RUNDIR's run.png / initial_state.png (and "
+                         "fst.png) from its summary.csv + full_dump.csv, into --outdir "
+                         "(default RUNDIR itself)")
     ap.add_argument("--regime", choices=sorted(config.REGIMES), default=None)
     ap.add_argument("--n0", type=float, default=None)
     ap.add_argument("--L", type=float, default=None,
@@ -619,12 +820,75 @@ def main():
     ap.add_argument("--dx", type=float, default=None)
     ap.add_argument("--dt", type=float, default=None)
     ap.add_argument("--T", type=float, default=None)
+    seed = ap.add_mutually_exclusive_group()
+    seed.add_argument("--cells", type=float, default=None,
+                      help="inoculum size in CELLS (total, both strains).  Converted to rho_seed "
+                           "via the seed integral and --area/--vcell.  The default rho_seed=1e-6 "
+                           "is ~3.6e-4 cells at A=10 um^2, i.e. a two-thousandth of one bacterium; "
+                           "--cells 2 seeds one cell per strain.")
+    seed.add_argument("--rho-seed", dest="rho_seed", type=float, default=None,
+                      help="set the seed amplitude directly instead")
+    ap.add_argument("--seed-f1", dest="seed_f1", type=float, default=None,
+                    help="strain-1 fraction in the seed (default 0.5)")
+    ap.add_argument("--area", type=float, default=1000.0,
+                    help="cavity cross-section [um^2], used ONLY to convert density <-> cells.  Default 1000 = 50 x 20 um, the FABRICATED device of Karita, Limmer & Hallatschek (bioRxiv 10.1101/2021.05.13.444017, Methods 1.2: 20 um SU8 mold; Fig 1a: width 50 um, height 20 um, length Ln = n*10 um for n=1..35).")
+    ap.add_argument("--vcell", type=float, default=0.65,
+                    help="E. coli single-cell volume [um^3].  DEFAULT 0.65, the midpoint of the "
+                         "0.6-0.7 range the manuscript's Extinction section cites and uses; the "
+                         "code default must match the paper or every cell count in a run that "
+                         "forgets this flag is off by 1.54x (this already happened -- the jammed "
+                         "summaries were written at 1.0 while the T=12000 dilute run used 0.65). "
+                         "Defensible range 0.6-1.3 for GLUCOSE MINIMAL at mu = 0.2-0.8 /h (a 2 um "
+                         "spherocylinder of diameter 0.7-1.0 um).  NOTE Volkmer & Heinemann 2011 "
+                         "PLoS ONE 6:e23126 report 1.5-4.4 um^3, but that is COMPLEX medium / "
+                         "fast growth -- cell volume follows the growth rate (Schaechter et al. "
+                         "1958), so it does not apply here.  Diagnostics only: --vcell rescales "
+                         "the reported cell counts and changes no dynamics.")
     ap.add_argument("--n-save", dest="n_save", type=int, default=241)
+    ap.add_argument("--max-adv-substeps", dest="max_adv_substeps", type=int, default=None,
+                    help="raise Numerics.max_advection_substeps (default 2000).  The substep "
+                         "count scales as 1/dx (204/514/1105/2235 at dx=2/1/0.5/0.25 -- "
+                         "re-confirmed 2026-09-21 on the production runs), so dx<=0.25 exceeds "
+                         "the default cap and those steps would then run ABOVE "
+                         "advection_cfl=0.45.  The dx=0.25 convergence run was executed with this "
+                         "flag raised and reports adv_capped_steps=0, so it is admissible.  A "
+                         "cost guard, not a physical parameter -- ALWAYS check adv_capped_steps=0 "
+                         "in summary.csv.  NB read those from summary.csv, not from history.csv: "
+                         "history is written per SAVED FRAME, so its advection_substeps column "
+                         "samples ~1 step in 500 on a long run and understates the max ~10x.")
     ap.add_argument("--outdir", default=None)
-    ap.add_argument("--dump", action="store_true", help="also write full_dump.csv")
+    # full_dump.csv is ON BY DEFAULT (2026-09-23).  It is the only file holding the space-time
+    # fields behind the heatmaps (run.png panels H/I) and the flux/budget panels; without it those
+    # panels exist only as pixels and cannot be redrawn without rerunning -- which is exactly what
+    # happened to run_noise_dilute.  Rule: every plotted array is written to CSV.  --no-dump opts
+    # out for throwaway runs; --dump is still accepted so existing commands keep working.
+    ap.add_argument("--dump", dest="dump", action="store_true", default=True,
+                    help="write full_dump.csv (the default)")
+    ap.add_argument("--no-dump", dest="dump", action="store_false",
+                    help="skip full_dump.csv -- the heatmap/flux panels then cannot be redrawn")
+    ap.add_argument("--fst", action="store_true",
+                    help="also write fst.csv and fst.png: Wright's F_ST per frame, the spatial "
+                         "homogeneity of the composition (delta_f is a two-zone contrast and "
+                         "cannot see structure inside a zone)")
     ap.add_argument("--stride", type=int, default=1, help="thin the drawn curves in profiles_all")
+    ap.add_argument("--limiter", nargs="?", const="vanleer", default="none",
+                    choices=("none", "minmod", "vanleer", "superbee"),
+                    help="TVD flux limiter on the strain-label advection (bare --limiter = "
+                         "vanleer). Default 'none' is plain donor-cell upwinding and reproduces "
+                         "every existing run bit-for-bit. Only the label advection is first "
+                         "order, so this is the only transport error a limiter can remove.")
     config.add_model_args(ap)
     a = ap.parse_args()
+
+    if a.replot:
+        d = a.replot if os.path.isabs(a.replot) else os.path.join(HERE, a.replot)
+        if not os.path.isdir(d):
+            d = os.path.abspath(a.replot)
+        t0 = time.time()
+        for path in replot(d, a.outdir or d):
+            print(f"  wrote {path}")
+        print(f"  replotted in {time.time() - t0:.1f}s")
+        return
 
     base = config.REGIMES[a.regime] if a.regime else config.REGIMES["dilute"]
     n0 = a.n0 if a.n0 is not None else base["n0"]
@@ -636,19 +900,54 @@ def main():
         raise SystemExit(f"--L must be positive, got {L:g}")
 
     p = config.params_from_args(a, n0)
-    num = config.numerics(T_end=T, dt=dt, dx=dx, n_save=a.n_save)
-    ic = config.initial_conditions()
+    _num_kw = {} if a.max_adv_substeps is None else {"max_advection_substeps": a.max_adv_substeps}
+    num = config.numerics(T_end=T, dt=dt, dx=dx, n_save=a.n_save, label_limiter=a.limiter,
+                          **_num_kw)
+
+    # Inoculum.  cells = rho_seed * I * A / V, with I the integral of the unit-amplitude seed
+    # profile -- so the SHAPE (seed_center_um, seed_width_um) and the grid enter, and the
+    # conversion has to be done here rather than with a hard-coded constant.
+    ic_kw = {} if a.seed_f1 is None else {"seed_f1": a.seed_f1}
+    ic = config.initial_conditions(**ic_kw)
+    N_grid = C.choose_grid_size(L, num)
+    xg, dxg = C.cell_grid(L, N_grid)
+    from dataclasses import replace as _replace
+    I_seed = float((C.initial_total_density(xg, L, p, _replace(ic, rho_seed=1.0)) * dxg).sum())
+    if a.cells is not None:
+        rho_seed = a.cells * a.vcell / (I_seed * a.area)
+        ic = _replace(ic, rho_seed=rho_seed)
+    elif a.rho_seed is not None:
+        ic = _replace(ic, rho_seed=a.rho_seed)
+    inoc_cells = ic.rho_seed * I_seed * a.area / a.vcell
     # L is in the directory name so an L sweep does not overwrite itself.  The seed is anchored
     # to the OPENING (seed_center_um=25) and does not scale with L, so runs at different L share
     # the same inoculum -- which is what makes them comparable.
-    outdir = a.outdir or os.path.join(HERE, f"run_n0-{n0:g}_L{L:g}_dx{dx:g}_T{T:g}")
+    # tag the directory only when the seed is overridden, so existing default-seed runs keep
+    # their names and an inoculum sweep cannot overwrite itself
+    tag = ""
+    if a.cells is not None:
+        tag = f"_cells{a.cells:g}"
+    elif a.rho_seed is not None:
+        tag = f"_seed{a.rho_seed:g}"
+    # tag the limiter too, so a limiter run cannot overwrite the default-scheme run it is
+    # meant to be compared against
+    if a.limiter != "none":
+        tag += f"_lim-{a.limiter}"
+    outdir = a.outdir or os.path.join(HERE, f"run_n0-{n0:g}_L{L:g}_dx{dx:g}_T{T:g}{tag}")
     os.makedirs(outdir, exist_ok=True)
 
-    N = C.choose_grid_size(L, num)          # warns if min_cells/max_cells clip the requested dx
+    N = N_grid                              # choose_grid_size already warned if dx was clipped
     print(f"n0={n0:g} uM  L={L:g} um  dx={dx:g} um (N={N}, realized dx={L / N:.4g} um)  "
           f"dt={dt:g} h  T={T:g} h  n*={config.NSTAR:.4f} uM")
+    print(f"  seed: rho_seed={ic.rho_seed:.4e}  seed_f1={ic.seed_f1:g}  ->  {inoc_cells:.4g} cells "
+          f"total ({inoc_cells * ic.seed_f1:.4g} strain 1) at A={a.area:g} um^2, V={a.vcell:g} um^3"
+          + ("   [SUB-CELLULAR INOCULUM]" if inoc_cells < 1.0 else ""))
     t0 = time.time()
     res = solver.simulate(L, p, num, ic, progress=True)
+    res["cross_section_um2"] = a.area
+    res["cell_volume_um3"] = a.vcell
+    res["inoculum_cells"] = inoc_cells
+    res["rho_seed"] = ic.rho_seed
     print(f"  simulated {res['N']} cells in {time.time()-t0:.1f}s -- {res['message']}")
 
     val = D.validate(res, p)
@@ -660,7 +959,14 @@ def main():
     figure_profiles_all(res, p, fields(res, p, mask=False),
                         os.path.join(outdir, "profiles_all.png"), stride=max(1, a.stride))
     dumped = write_csvs(outdir, res, p, val, dump=a.dump,
-                        F=fields(res, p, mask=False) if a.dump else None)
+                        F=fields(res, p, mask=False) if a.dump else None, fst=a.fst, num=num)
+    if a.fst:
+        figure_fst(res, p, os.path.join(outdir, "fst.png"))
+        s = D.fst_summary(res, p)
+        print(f"  F_ST peak {s['F_ST_peak']:.4f} at t={s['t_F_ST_peak']:.0f} h -> "
+              f"final {s['F_ST_final']:.4f}  "
+              f"(slope {s['dF_ST_per_1000h_late']:+.3e}/1000h, "
+              f"{s['F_ST_frames_valid']}/{len(res['t'])} frames above the conditioning floor)")
     print(f"  figures + CSVs in {time.time()-t1:.1f}s")
     print(f"  wrote {outdir}")
     if dumped:

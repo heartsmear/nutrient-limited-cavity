@@ -92,6 +92,12 @@ class Numerics:
     # every step (measured: cap hit on 88% of steps, 13x the necessary work, at a residual already
     # 1e-18 relative).  Set False to reproduce src/ bit-for-bit -- see test_regression.py.
     reaction_tol_relative: bool = True
+    # Flux limiter for the strain-label advection.  "none" (default) is plain donor-cell
+    # upwinding and is bit-identical to the scheme before the limiter was added; "minmod",
+    # "vanleer" and "superbee" are TVD limiters (see limited_fraction_faces), admissible because
+    # advection_cfl = 0.45 <= 0.5.  This is the ONLY first-order transport error in the solver,
+    # so it is the only place a limiter can change anything.
+    label_limiter: str = "none"
 
 
 @dataclass(frozen=True)
@@ -469,6 +475,75 @@ def upwind_fraction_faces(f: np.ndarray, J: np.ndarray) -> np.ndarray:
     return np.clip(ff, 0.0, 1.0)
 
 
+def _limited_slope(a: np.ndarray, b: np.ndarray, kind: str) -> np.ndarray:
+    """TVD-limited slope from the upstream difference `a` and the downstream difference `b`.
+
+    Returned in the same units as the differences, so the MUSCL face value is
+    f_donor + 0.5 * _limited_slope(a, b).  Written in slope form rather than as phi(r) with
+    r = a/b precisely to avoid the division: where b -> 0 the correction must vanish, and the
+    slope form gives that identically instead of via a 0/0 guard.
+
+    All three limiters return 0 when a*b <= 0 (an extremum), which reduces the face value to
+    plain donor-cell and is what keeps the scheme bounded there.  On a smooth profile a = b and
+    every limiter returns a, i.e. exact linear interpolation to the face -- second order.
+    """
+    out = np.zeros_like(b)
+    m = (a * b) > 0.0
+    if not np.any(m):
+        return out
+    am, bm = a[m], b[m]
+    s, aa, bb = np.sign(am), np.abs(am), np.abs(bm)
+    if kind == "minmod":
+        out[m] = s * np.minimum(aa, bb)
+    elif kind == "vanleer":
+        out[m] = 2.0 * am * bm / (am + bm)      # a*b>0 => |a+b| >= max(|a|,|b|) > 0
+    elif kind == "superbee":
+        out[m] = s * np.maximum(np.minimum(2.0 * aa, bb), np.minimum(aa, 2.0 * bb))
+    else:
+        raise ValueError(f"unknown label limiter {kind!r} "
+                         f"(use 'none', 'minmod', 'vanleer' or 'superbee')")
+    return out
+
+
+def limited_fraction_faces(f: np.ndarray, J: np.ndarray, kind: str = "none") -> np.ndarray:
+    """MUSCL face value of f with a TVD limiter; `kind='none'` returns plain donor-cell.
+
+    WHY THIS EXISTS.  Donor-cell upwinding takes the face value from the cell centre half a cell
+    UPSTREAM, and the leading term of that error is a diffusion, D_num = |u| dx (1-|nu|)/2, which
+    is not in the model and is first order in dx.  It is the only first-order transport error in
+    the solver -- everything else is centred and implicit -- and it acts on the strain label
+    alone, which is why the composition is the one quantity that fails to converge in the jammed
+    cavity while rho and the n* front do not.
+
+    A limiter blends the donor-cell and centred face values with a solution-dependent weight, so
+    it is second order where f is smooth and falls back to donor-cell at extrema.  Being
+    nonlinear it escapes Godunov's theorem and can be both bounded and second order.  TVD needs
+    CFL <= 0.5; `Numerics.advection_cfl` is 0.45, so the existing sub-cycling already suffices.
+
+    OFF BY DEFAULT.  With kind='none' this returns `upwind_fraction_faces` unchanged, so the
+    default solver path is bit-identical to the scheme without it.
+    """
+    ff = upwind_fraction_faces(f, J)          # donor-cell baseline, and faces 0 and N
+    if kind == "none":
+        return ff
+    N = len(f)
+    if N < 4:                                 # no room for the 4-point stencil
+        return ff
+    k = np.arange(1, N)                       # interior faces: face k separates cells k-1 and k
+    pos = J[1:N] >= 0.0
+    D = np.where(pos, k - 1, k)               # donor
+    U = np.where(pos, k - 2, k + 1)           # the cell upstream of the donor
+    A = np.where(pos, k, k - 1)               # acceptor
+    ok = (U >= 0) & (U <= N - 1)              # stencil fits; otherwise stay donor-cell
+    a = np.zeros(k.shape); b = np.zeros(k.shape)
+    a[ok] = f[D[ok]] - f[U[ok]]
+    b[ok] = f[A[ok]] - f[D[ok]]
+    corr = np.zeros(k.shape)
+    corr[ok] = 0.5 * _limited_slope(a[ok], b[ok], kind)
+    ff[1:N] = np.where(ok, f[D] + corr, ff[1:N])
+    return np.clip(ff, 0.0, 1.0)
+
+
 def advect_strain_by_total_flux(rho1, rho_total_start, J_total, dt, dx,
                                 p: ModelParams, num: Numerics):
     """Conservatively advect strain-1 mass by the realized total flux, CFL-subcycled.
@@ -481,16 +556,25 @@ def advect_strain_by_total_flux(rho1, rho_total_start, J_total, dt, dx,
     rho = rho_total_start.copy()
     m1 = np.minimum(np.maximum(rho1.copy(), 0.0), rho)
     max_clip = 0.0
+    # 'none' (the default) takes the donor-cell branch below, so the default path is untouched.
+    lim = getattr(num, "label_limiter", "none")
     for _ in range(nsub):
         f = local_fraction_exact(m1, np.maximum(rho - m1, 0.0), tol=p.tiny_density)
-        J1 = upwind_fraction_faces(f, J_total) * J_total
+        ff = (upwind_fraction_faces(f, J_total) if lim == "none"
+              else limited_fraction_faces(f, J_total, lim))
+        J1 = ff * J_total
         m1_next = m1 - h * (J1[1:] - J1[:-1]) / dx
         rho_next = np.maximum(rho - h * (J_total[1:] - J_total[:-1]) / dx, 0.0)
         before = m1_next.copy()
         m1_next = np.minimum(np.maximum(m1_next, 0.0), rho_next)
         max_clip = max(max_clip, float(np.max(np.abs(m1_next - before))))
         m1, rho = m1_next, rho_next
-    return m1, rho, {"advection_substeps": float(nsub), "advection_clip_linf": max_clip}
+    diag = {"advection_substeps": float(nsub), "advection_clip_linf": max_clip}
+    if lim != "none":
+        # provenance, only when the limiter is on -- so the default diag dict is unchanged and
+        # existing history.csv files keep exactly the columns they have
+        diag["advection_limited"] = 1.0
+    return m1, rho, diag
 
 
 def implicit_self_diffusion_fraction(rho1_adv, rho_total, p: ModelParams, dt, dx):

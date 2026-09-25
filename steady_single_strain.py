@@ -173,6 +173,18 @@ import closures as C  # noqa: E402  (read-only import of the live stack)
 import config         # noqa: E402
 
 C1, C2, CN = "#1f77b4", "#d62728", "#2ca02c"
+
+#: Figure suptitles duplicate the LaTeX caption in the thesis, so the Paper/ copies are rendered
+#: without them.  --no-suptitle reproduces that instead of hand-editing the calls out.
+SUPTITLE = True
+
+
+def _suptitle(fig, *args, **kw):
+    # was `_suptitle(fig, ...)` -- the fig.suptitle -> _suptitle replace also caught this line,
+    # so every figure-writing run died in infinite recursion unless --no-suptitle was passed
+    if SUPTITLE:
+        fig.suptitle(*args, **kw)
+
 TINY = 1.0e-300
 RHO_HI = 1.0 - 1.0e-9          # Psi table domain is [0,1]; never step past it
 ATANH_INV_SQRT3 = float(np.arctanh(1.0 / np.sqrt(3.0)))   # 0.658479, the sech^2 seed phase
@@ -1170,7 +1182,7 @@ def _panel(figsize=(6.4, 4.4)):
 
 
 def _finish(fig, path, what, res):
-    fig.suptitle(f"{what}\n{_run_title(res)}", fontsize=9)
+    _suptitle(fig, f"{what}\n{_run_title(res)}", fontsize=9)
     fig.tight_layout(rect=(0, 0, 1, .92))
     fig.savefig(path, dpi=150)
     plt.close(fig)
@@ -1313,6 +1325,22 @@ def figure_closures(res, cl: Closure, path):
     a.legend(fontsize=7)
     _finish(fig, path, "closures over the full density range, and the invariant they imply", res)
 
+    # Every plotted array beside the PNG (rule: plotted arrays are always saved).  The closure
+    # curves of (a)-(c) exist nowhere else on disk; (d) repeats profile.csv's Psi for convenience.
+    stem = os.path.splitext(path)[0]
+    with open(stem + "_curves.csv", "w", newline="") as fh:
+        w = csv.writer(fh)
+        w.writerow(["rho", "D_col", "D_self", "Psi", "rho_at_Dcol_max_subjam"])
+        for k in range(r.size):
+            w.writerow([f"{r[k]:.6g}", f"{Dc[k]:.10g}", f"{Ds[k]:.10g}", f"{Ps[k]:.10g}",
+                        f"{r[i_max]:.6g}" if k == 0 else ""])
+    with open(stem + "_invariant.csv", "w", newline="") as fh:
+        w = csv.writer(fh)
+        w.writerow(["x_um", "Psi_of_rho", "YDn_n0_minus_n"])
+        rhs = cl.YDn * (p.n0 - res["n"])
+        for i in range(len(res["x"])):
+            w.writerow([f"{res['x'][i]:.6g}", f"{d['Psi'][i]:.10g}", f"{rhs[i]:.10g}"])
+
 
 def figure_validation(res, cl: Closure, path):
     d = derived(res)
@@ -1377,6 +1405,30 @@ def figure_validation(res, cl: Closure, path):
     fig.savefig(path, dpi=150)
     plt.close(fig)
 
+    # Every plotted array beside the PNG.  (b) is newton_history.csv; (a), (c), (d) are here --
+    # the onset fit of (d) in particular exists nowhere else on disk.
+    stem = os.path.splitext(path)[0]
+    with open(stem + "_residual.csv", "w", newline="") as fh:              # (a)
+        w = csv.writer(fh)
+        w.writerow(["x_um", "invariant_residual_relative"])
+        rel = np.abs(d["invariant"]) / max(cl.YDn * res["p"].n0, TINY)
+        for i in range(len(res["x"])):
+            w.writerow([f"{res['x'][i]:.6g}", f"{rel[i]:.6e}"])
+    with open(stem + "_dxconv.csv", "w", newline="") as fh:                # (c)
+        w = csv.writer(fh)
+        w.writerow(["dx_um", "biomass_integral_um", "rho_L"])
+        for c in conv:
+            w.writerow([f"{c[0]:.8g}", f"{c[1]:.12g}", f"{c[2]:.12g}" if len(c) > 2 else ""])
+    with open(stem + "_onset_fit.csv", "w", newline="") as fh:             # (d)
+        w = csv.writer(fh)
+        w.writerow(["dL_um", "delta_L_uM", "measured_over_predicted", "slope_predicted"])
+        if fit is not None:
+            dL, dl = fit
+            slope = res.get("_onset_slope_pred", np.nan)
+            for k in range(len(dL)):
+                w.writerow([f"{dL[k]:.10g}", f"{dl[k]:.10g}",
+                            f"{dl[k] / (slope * dL[k]):.10g}", f"{slope:.10g}"])
+
 
 def figure_branch(rows, res, cl: Closure, path, quad_curve=None):
     fig, ax = plt.subplots(1, 2, figsize=(12, 4.4))
@@ -1425,6 +1477,14 @@ def figure_branch(rows, res, cl: Closure, path, quad_curve=None):
     fig.tight_layout(rect=(0, 0, 1, .97))
     fig.savefig(path, dpi=150)
     plt.close(fig)
+
+    # the branch points are branch.csv; the quadrature overlay exists only here
+    if quad_curve is not None:
+        with open(os.path.splitext(path)[0] + "_quadrature.csv", "w", newline="") as fh:
+            w = csv.writer(fh)
+            w.writerow(["rho_L", "L_um"])
+            for rv, lv in zip(quad_curve[0], quad_curve[1]):
+                w.writerow([f"{rv:.10g}", f"{lv:.10g}"])
 
 
 # =============================================================================
@@ -1996,12 +2056,28 @@ def figure_budget(rows, cl: Closure, p_base: C.ModelParams, mu: float, Ks: float
                 fontsize=10, fontweight="bold")
     a.grid(alpha=.2, which="both")
 
-    fig.suptitle(r"jamming criterion $A_{\rm eff}=YD_n(n_0-n(L))>B$ against direct solutions"
+    _suptitle(fig, r"jamming criterion $A_{\rm eff}=YD_n(n_0-n(L))>B$ against direct solutions"
                  "\n" r"$\mu$=%g 1/h, $K_s$=%g $\mu$M, $B$=%.2f" % (mu, Ks, cl.B),
                  fontsize=9)
     fig.tight_layout(rect=(0, 0.06, 1, .90))
     fig.savefig(path, dpi=150)
     plt.close(fig)
+
+    # The points are budget_sweep.csv; the two analytic curves of (a) exist only here.
+    stem = os.path.splitext(path)[0]
+    L_on_curve = [onset_length(_with_n0(p_base, v), mu, Ks) for v in nn]
+    with open(stem + "_analytic.csv", "w", newline="") as fh:
+        w = csv.writer(fh)
+        w.writerow(["n0_uM", "L_onset_analytic_um", "L_jam_quadrature_um"])
+        for k in range(nn.size):
+            w.writerow([f"{nn[k]:.10g}", f"{L_on_curve[k]:.10g}",
+                        f"{lj[k]:.10g}" if np.isfinite(lj[k]) else ""])
+    with open(stem + "_marks.csv", "w", newline="") as fh:
+        w = csv.writer(fh)
+        w.writerow(["quantity", "value"])
+        for k, v in (("n0_crit_uM", cl.n0_jam), ("B", cl.B), ("mu_per_h", mu), ("Ks_uM", Ks),
+                     ("points_agree", sum(r["agree"] for r in rows)), ("points", len(rows))):
+            w.writerow([k, f"{v:.10g}"])
 
 
 def figure_fold(main_rows, family, widths, cl: Closure, p_base: C.ModelParams,
@@ -2086,8 +2162,8 @@ def figure_fold(main_rows, family, widths, cl: Closure, p_base: C.ModelParams,
     hi = np.array([w[2] for w in widths])
     ok = np.isfinite(lo)
     a.fill_between(vs[ok], lo[ok], hi[ok], color=CN, alpha=.3, label="multi-valued $L$")
-    a.plot(vs[ok], lo[ok], "-", color=C1, lw=1.4, label=r"lower turning point")
-    a.plot(vs[ok], hi[ok], "-", color=C2, lw=1.4, label=r"upper turning point")
+    a.plot(vs[ok], lo[ok], "-", color=C1, lw=1.4, label=r"lower tipping point")
+    a.plot(vs[ok], hi[ok], "-", color=C2, lw=1.4, label=r"upper tipping point")
     a.axvline(cl.n0_jam, color="k", ls=":", lw=1.2,
               label=r"$n_0^{\rm crit}$=%.0f $\mu$M ($A\!=\!B$)" % cl.n0_jam)
     n0s = (cusp or {}).get("n0_star", float("nan"))
@@ -2112,7 +2188,7 @@ def figure_fold(main_rows, family, widths, cl: Closure, p_base: C.ModelParams,
         a.loglog(dn[m], wv[m], "o-", color=C1, lw=1.4, ms=5,
                  label=r"window width, $\alpha$=%.3f" % cusp["alpha_width"])
         a.loglog(dn[m], dv[m], "s-", color=C2, lw=1.4, ms=5,
-                 label=r"turning-point separation in $\rho$, $\alpha$=%.3f"
+                 label=r"tipping-point separation in $\rho$, $\alpha$=%.3f"
                        % cusp["alpha_drho"])
         d0 = dn[m][0]
         a.loglog(dn[m], wv[m][0] * (dn[m] / d0) ** 1.5, ":", color="0.4", lw=1.2,
@@ -2129,13 +2205,35 @@ def figure_fold(main_rows, family, widths, cl: Closure, p_base: C.ModelParams,
         a.set_title("(d) cusp scaling", fontsize=10, fontweight="bold")
     a.grid(alpha=.2, which="both")
 
-    fig.suptitle("the jamming fold: three steady states share one cavity length"
+    _suptitle(fig, "the jamming fold: three steady states share one cavity length"
                  "\n" r"$\mu$=%g 1/h, $K_s$=%g $\mu$M   "
                  r"(branch traced by quadrature, every point re-solved from the PDE)"
                  % (mu, Ks), fontsize=9)
     fig.tight_layout(rect=(0, 0, 1, .93))
     fig.savefig(path, dpi=150)
     plt.close(fig)
+
+    # (a) is fold_branch.csv, (c) fold_window_vs_n0.csv, (d) fold_cusp.csv.  The family of (b)
+    # and the marked values exist only here.
+    stem = os.path.splitext(path)[0]
+    with open(stem + "_family.csv", "w", newline="") as fh:
+        w = csv.writer(fh)
+        w.writerow(["n0_uM", "L_um", "rho_branch"])
+        for v, rr in sorted(family.items()):
+            for r in rr:
+                w.writerow([f"{v:.10g}", f"{r['L']:.10g}", f"{r['rho_branch']:.10g}"])
+    with open(stem + "_marks.csv", "w", newline="") as fh:
+        w = csv.writer(fh)
+        w.writerow(["quantity", "value"])
+        marks = [("n0_main_uM", n0_main), ("n0_crit_uM", cl.n0_jam), ("rho_jam", p_base.rho_jam),
+                 ("window_L_lo_um", window[0] if window is not None else float("nan")),
+                 ("window_L_hi_um", window[1] if window is not None else float("nan")),
+                 ("n0_star_cusp_uM", (cusp or {}).get("n0_star", float("nan"))),
+                 ("n0_star_bisection_uM", thresh[1] if thresh is not None else float("nan")),
+                 ("alpha_width", (cusp or {}).get("alpha_width", float("nan"))),
+                 ("alpha_drho", (cusp or {}).get("alpha_drho", float("nan")))]
+        for k, v in marks:
+            w.writerow([k, f"{v:.10g}"])
 
 
 def fold_closure_Ks(gamma_rows, p_base: C.ModelParams, cl: Closure, mu0: float,
@@ -2271,12 +2369,23 @@ def figure_fold_params(study, cl: Closure, mu0: float, Ks0: float, path):
     a.set_title(r"(d) $K_s$ slides the upper edge only", fontsize=10, fontweight="bold")
     a.legend(fontsize=7); a.grid(alpha=.2, which="both")
 
-    fig.suptitle("what sets whether a cavity folds"
+    _suptitle(fig, "what sets whether a cavity folds"
                  "\n" r"$L=\sqrt{B/\mu_{\max}}\;F(P_*;\,\nu_0=A/B,\;"
                  r"\Gamma=n_0^{\rm crit}/K_s;\;\mathrm{shape\ of}\ \Psi)$", fontsize=10)
     fig.tight_layout(rect=(0, 0, 1, .91))
     fig.savefig(path, dpi=150)
     plt.close(fig)
+
+    # The four panels are foldparams_{gamma,collapse,mu,closure}.csv; the closure Ks marked in
+    # (d) was only ever printed, so it is recorded here together with how it was obtained.
+    with open(os.path.splitext(path)[0] + "_marks.csv", "w", newline="") as fh:
+        w = csv.writer(fh)
+        w.writerow(["quantity", "value"])
+        src = "bisection" if np.isfinite(study.get("Ks_closure", float("nan"))) else \
+              "linear extrapolation"
+        w.writerow(["n0_crit_uM", f"{cl.n0_jam:.10g}"])
+        w.writerow(["Ks_closure_uM", f"{Ks_c:.10g}"])
+        w.writerow(["Ks_closure_method", src])
 
 
 def figure_lstar_general(rows, cl: Closure, mu: float, Ks: float, path):
@@ -2325,7 +2434,7 @@ def figure_lstar_general(rows, cl: Closure, mu: float, Ks: float, path):
     a.set_title("(b) round-trip error", fontsize=10, fontweight="bold")
     a.legend(fontsize=7); a.grid(alpha=.2, which="both")
 
-    fig.suptitle("verification of the general threshold length   "
+    _suptitle(fig, "verification of the general threshold length   "
                  r"$L^*=\int_0^{p_*}\!dp\,/\,\sqrt{2\int_p^{p_*}\!g(n(s))\rho(s)\,ds}$"
                  "\nexact: no approximation beyond the steady PDE", fontsize=9)
     fig.tight_layout(rect=(0, 0, 1, .90))
@@ -2377,11 +2486,21 @@ def figure_lstar_dilute(rows, cl: Closure, mu: float, Ks: float, path, bracket_e
 
     extra = "" if bracket_err is None else (
         "   printed closed form vs its defining integral: %.1e" % bracket_err)
-    fig.suptitle(r"verification of the DILUTE threshold length ($\Psi\approx D_0\rho$, "
+    _suptitle(fig, r"verification of the DILUTE threshold length ($\Psi\approx D_0\rho$, "
                  r"$g\approx kn$)" + extra, fontsize=9)
     fig.tight_layout(rect=(0, 0, 1, .92))
     fig.savefig(path, dpi=150)
     plt.close(fig)
+
+    # the curves and points are lstar_sweep.csv; these are the scalars the figure marks
+    with open(os.path.splitext(path)[0] + "_marks.csv", "w", newline="") as fh:
+        w = csv.writer(fh)
+        w.writerow(["quantity", "value"])
+        w.writerow(["theta_ref_panel_b", f"{th_ref:.10g}"])
+        w.writerow(["Ks_uM", f"{Ks:.10g}"])
+        w.writerow(["n0_crit_uM", f"{cl.n0_jam:.10g}"])
+        w.writerow(["closed_form_vs_integral_err",
+                    "" if bracket_err is None else f"{bracket_err:.6e}"])
 
 
 # =============================================================================
@@ -2457,7 +2576,12 @@ def main() -> None:
     ap.add_argument("--outdir", default=None)
     ap.add_argument("--verbose", action="store_true")
     config.add_model_args(ap)
+    ap.add_argument("--no-suptitle", dest="suptitle", action="store_false", default=True,
+                    help="omit figure suptitles (the Paper/ copies; the LaTeX caption "
+                         "already carries the same text)")
     a = ap.parse_args()
+    global SUPTITLE
+    SUPTITLE = a.suptitle
 
     base = config.REGIMES[a.regime] if a.regime else config.REGIMES["dilute"]
     n0 = a.n0 if a.n0 is not None else base["n0"]
