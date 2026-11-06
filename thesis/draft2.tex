@@ -19,7 +19,7 @@
 \usepackage{xcolor}
 \usepackage{hyperref}
 \usepackage{lipsum}
-\usepackage[backend=biber]{biblatex}
+\usepackage[backend=biber, style=numeric-comp, sorting=none]{biblatex}
 
 \addbibresource{references2.bib}
 
@@ -99,12 +99,24 @@
 		
 	\end{titlepage}
 	\chapter*{Abstract}
-	How bacteria form colonies in confined cavities has previously been studied in nutrient rich conditions, we extend this to make analytical and numerical prediction about strain phase transitions and sorting in resource competition under nutrient limitation. We show that the jamming transition, previously known to be abrupt \cite{Karita}, is continuous if it has barely enough nutrients to reach this state. Additionally we give a numerically validated threshold length formula, relating endpoint nutrient concentration and cavity length. When two strains compete for the same limited nutrient they do not simply sort to their advantage, we found that they can dominate regions where they are locally disfavored which we call inverse sorting. This can be either transient with Tilmans $R^*$ \cite{rstar} limit for the dilute cavity or permanent over a cells lifespan if the population becomes jammed. This suggests that taking a snapshot of a composition is not reflective of the strains specialty niche. We demonstrate that even a simple deterministic reaction-diffusion model is capable of producing interesting results.\\
+	How bacteria form colonies in confined cavities has previously been studied in nutrient rich conditions, we extend this to make analytical and numerical prediction about strain phase transitions and sorting in resource competition under nutrient limitation. We show that the jamming transition, previously known to be abrupt in nutrient rich cavities \cite{Karita} and was shown qualitatively by Peris Yagüe to become gradual when growth saturates \cite{peris}, is continuous within a quantified window of nutrient supply if it has barely enough nutrients to reach this state. Additionally we give a numerically validated threshold length formula, relating endpoint nutrient concentration and cavity length. When two strains compete for the same limited nutrient they do not simply sort to their advantage, we found that they can dominate regions where they are locally disfavored which we call inverse sorting. This can be either transient with Tilmans $R^*$ \cite{rstar} limit for the dilute cavity or permanent over a cells lifespan if the population becomes jammed. This suggests that taking a snapshot of a composition is not reflective of the strains specialty niche. We demonstrate that even a simple deterministic reaction-diffusion model is capable of producing interesting results.\\
 	\\
-	Die Formung von bakteriellen Kolonien in Kavitäten wurde bisher nur in nährstoffreichen Zuständen ausgiebig erforscht, wir erweitern dies um die Limitierung der Nährstoffe der Zellen mittels analytischer und numerischer Prognosen in Phasenübergängen und räumlicher Sortierung bei Ressourcenkonkurrenz. Wir zeigen, dass der Übergang in den verklemmten Zustand, welcher bisher als abrupt galt \cite{Karita}, unter limitierter Nahrung stetig werden kann. Zudem ist ein Hauptpunkt der Gleichgewichtszustandsanalyse die numerisch validierte Schwellenlänge, die Kavitätenlänge und Nahrungskonzentration am Endpunkt direkt miteinander in Verbindung setzt. Wenn zwei Bakterienstämme um die gleiche Nahrung konkurrieren sortieren sie sich nicht räumlich nach ihrem lokalen Vorteil, sondern sie können sich fast komplett ihrem nach Zelleigenschaft bedingtem Wachstumsvorteil entgegen sortieren. Diese inverse Sortierung kann entweder, wie im gasförmigen Zustand, zeitlich vorübergehend sein, mit dem Gewinner des Wettkampfs nach Tilmans $R^*$ Regel \cite{rstar} oder über dem Lebenszeitraum einer Zelle permanent einfrieren. Dies suggeriert, dass man aus einer Zeitpunktaufnahme der räumlichen Zellenverteilung nicht auf Zelleneigenschaften schließen kann, sondern die Sortierung ein Produkt aus historischer Selektion und Advektion ist. Wir demonstrieren, dass selbst ein simpel gehaltenes Reaktions-Diffusions Modell dazu fähig ist interessante Ergebnisse zu produzieren.
+	Die Bildung bakterieller Kolonien in Kavitäten wurde bisher nur unter nährstoffreichen Bedingungen ausgiebig erforscht, wir erweitern dies um die Limitierung der Nährstoffe der Zellen mittels analytischer und numerischer Prognosen in Phasenübergängen und räumlicher Sortierung bei Ressourcenkonkurrenz. Wir zeigen, dass der Übergang in den gejammten Zustand,der unter nährstoffreichen Bedingungen abrupt ist \cite{Karita} und von Peris Yagüe bei sättigendem Wachstum qualitativ als stetig gezeigt wurde \cite{peris}, in einem quantifizierten Fenster der Nährstoffzufuhr stetig ist, wenn die Kavität gerade genug Nährstoffe hat, um diesen Zustand zu erreichen. Zudem ist ein Hauptergebnis der Analyse des stationären Zustands die numerisch validierte Schwellenlänge, die Kavitätslänge und Nahrungskonzentration am Endpunkt direkt miteinander in Verbindung setzt. Wenn zwei Bakterienstämme um denselben gleiche Nahrung konkurrieren, sortieren sie sich nicht räumlich nach ihrem lokalen Vorteil, sondern sie können sich fast komplett entgegen ihrem lokalen Wachstumsvorteil sortieren. Diese inverse Sortierung kann entweder, wie im gasförmigen Zustand, zeitlich vorübergehend sein, mit dem Gewinner des Wettkampfs nach Tilmans $R^*$ Regel \cite{rstar} oder über den Lebenszeitraum einer Zelle permanent einfrieren. Das legt nahe, dass man aus einer Momentaufnahme der räumlichen Zellenverteilung nicht auf Zelleigenschaften schließen kann, sondern die Sortierung ein Produkt aus historischer Selektion und Advektion ist. Wir demonstrieren, dass selbst ein simpel gehaltenes Reaktions-Diffusions-Modell interessante Ergebnisse liefern kann.
 	\tableofcontents
 	\chapter{Introduction}
-	Bacterial cells can form colonies in many different geometries, a common habitat for them are spatially confined cavities. These microhabitats could for example be soil pores, gut crypts or tooth cavities in carious lesions \cite{Karita} \cite{tooth}. Microbes inside a confined cavity of lengths $10-350 \mathrm{\mu m}$ are very stable, reaching a steady state within a couple days of running the experiment \cite{Karita}. Whether this steady state is empty, dilute or jammed was found to be heavily length dependent. However the experiments were explicitly nutrient rich, as such nutrient limitation and the accompanying dynamics were left unconsidered. We aim to investigate how nutrient limitation changes length-dependent population dynamics and state transitions. We extend a model of the experimental device called "Microfluidic Panflute" used by Karita \cite{Karita} which confines bacteria inside crypt shaped chambers. Multiple cavities of varying lengths are ordered by length next to each other with an orthogonal flow supplying the bacteria needed for colonization which enter through the opening. The flow at the opening  simultaneously functions as a washout for cells, if cells from the inside reach the opening the flow carries them out of the cavity. Food only enters through the same channel,  as such the opening is a death trap for greedy cells, if they chase the nutrient gradient too strongly they cannot colonize the cavity as they get washed out of their prospective habitat. This would be an important mechanism for nutrient chasing chemotaxis, which remains beyond the scope of this thesis. We simulate E. coli strains consuming glucose to grow and investigate how nutrient limitation changes phase state transitions and spatial pattern formation. The E. coli bacterium has been studied for decades and as such a large amount of experimental data has accumulated over the years, making it a standard parameter reference for modeling cells in microbial communities. Equivalently glucose is a common nutrient source for bacterial strains, specifically as a carbon and energy source for our E. coli strains. In spatial models resource competition inherently leads to pattern formation, sorting, exclusion or coexistence. For example the introduction of small defects at the floor can make strains sort themselves into their own regions over time, rescuing the slower strain from its death \cite{slepukhin}. A common limited resource competition prediction is the R* rule, which expects the population which can survive and grow better at lower nutrient availability to eventually take over. When two populations compete for the same nutrient, it is rarely observed in nature that they can coexist \cite{Murray}. However the introduction of spatial structure can create stable coexistence in competing populations by finding their own niche if they have a trade-off\cite{Tilman}. In Tilmans model the trade-off lies in differing colonization and competition rates, while in our model it lays in the nutrient dependent growth functions. Another example of coexistence are the anolis lizards of bimini, here 4 different species of lizards live in the same forest however are broadly divided into different sub regions, based on perch height and diameter preference \cite{lizard}. All of them feed mostly on the same ants, while each species is better suited for colonization in different regions of the forest, making them specialists. As such they sort according to their local advantage even though their food is globally present in the broad region. One could similarly assume that this would also apply for our specialist E. coli strains, expecting each strain to simply sort to where they have the advantage. The high affinity strain as such would mostly occupy the nutrient depleted interior and dead end while the glutton would dominate the nutrient rich opening. However perch heights in the lizard population sorting is static in space and time, our growth advantages are spatiotemporal as they change depending on the nutrient concentration. We found the sorting is not simply dominated by the local environment, in fact strains can dominate regions completely where they are locally disfavored. Making the sorting between strains inherently dependent on the history of selection and advection. Whether one strain wins or they end up being able to coexist depends heavily on the population state, i.e. if the community is jammed or dilute.
+	Bacterial cells can form colonies in many different geometries, a common habitat for them are spatially confined cavities. These microhabitats could for example be soil pores, gut crypts or tooth cavities in carious lesions \cite{Karita, tooth}. Microbes inside a confined cavity of lengths $10-350 \mathrm{\mu m}$ are very stable, reaching a steady state within a couple days of running the experiment \cite{Karita}. Whether this steady state is empty, dilute or jammed was found to be heavily length dependent (\cref{fig:pnas}B). We call a colony dilute or gaseous when cells are able to move individually, which occurs in sparse populations, and jammed when the cells are so densely packed that they can only move as a collective. The transitions between these states are abrupt tipping points, so a cavity that is jammed stays jammed even when it is shortened and an already established community resists invasion by new cells \cite{Karita}. However the experiments were explicitly nutrient rich and used a single species, as such nutrient limitation and the accompanying dynamics were left unconsidered. It is a relevant extension since colony establishment as well as jamming can be hindered by strong nutrient depletion \cite{Karita}. We aim to investigate how nutrient limitation changes length-dependent population dynamics and state transitions. For example in young ($18h$),  roughly $190\mathrm{\mu m}$ thick E. Coli populations growing on a solid agar surface, the supplied oxygen could only penetrate up to $40 \mathrm{\mu m}$ into the colony, leaving most of it oxygen poor \cite{thick}. In nature nutrients can be expected to be even more limited than in controlled laboratory experiments, e.g. the bacterium \textit{Escherichia coli} was found to double roughly 45 times slower in the wild than under ordinary laboratory conditions \cite{wild}. Nutrient scarcity and growth limitation is an important mechanism controlling bacterial populations in nature, e.g. the gut \cite{gut}. We extend a model of the experimental device called "Microfluidic Panflute" (\cref{fig:pnas}) used by Karita \cite{Karita} which confines bacteria inside crypt shaped chambers. Multiple cavities of varying lengths are ordered by length next to each other with an orthogonal flow supplying the bacteria needed for colonization which enter through the opening (\cref{fig:pnas}A). The flow at the opening  simultaneously functions as a washout for cells, if cells from the inside reach the opening the flow carries them out of the cavity.
+	\begin{figure}[!htbp]
+		\centering
+		\includegraphics[width=\linewidth]{pnas.2115496119fig012}
+		\caption{Experimental device Microfluidic Panflute, figure taken from Karita \cite{Karita} (Fig. 1, A-B). (A) Scheme of the experimental setup, rectangular cavities of the dimensions $L_n\times50\mathrm{\mu m}\times20\mathrm{\mu m}$ with an orthogonal flow above the cavity opening supplying bacteria and nutrients. (B) Captured experimental image showing different states of colonization of the fly gut bacterium \textit{Acetobacter indonesiensis} in steady state after five days of incubation. 1 shows an empty cavity that is too short to be invaded, 2 to 6 a gaseous (dilute) colony, while 7 and 8 are phase separated into a gaseous part near the opening and a jammed one below.}
+		\label{fig:pnas}
+	\end{figure}
+	\FloatBarrier
+	Food only enters through the same channel, as such the opening is a death trap for greedy cells, if they chase the nutrient gradient too strongly they cannot colonize the cavity as they get washed out of their prospective habitat. This would be an important mechanism for nutrient chasing chemotaxis, which remains beyond the scope of this thesis. We simulate E. coli strains consuming glucose to grow and investigate how nutrient limitation changes phase state transitions and spatial pattern formation. The E. coli bacterium has been studied for decades and as such a large amount of experimental data has accumulated over the years, making it a standard parameter reference for modeling cells in microbial communities. Equivalently glucose is a common nutrient source for bacterial strains, specifically as a carbon and energy source for our E. coli strains. In spatial models resource competition inherently leads to pattern formation, sorting, exclusion or coexistence. For example the introduction of small defects at the floor can make strains sort themselves into their own regions over time, rescuing the slower strain from its death \cite{slepukhin}. A common limited resource competition prediction is the $R^*$ rule, which expects the population which can survive and grow better at lower nutrient availability to eventually take over \cite{rstar}. When two populations compete for the same nutrient, it is rarely observed in nature that they can coexist \cite{Murray}. However the introduction of spatial structure can create stable coexistence in competing populations by finding their own niche if they have a trade-off\cite{Tilman}. In Tilmans model the trade-off lies in differing colonization and competition rates, while in our model it lays in the nutrient dependent growth functions. Another example of coexistence are the anolis lizards of bimini, here 4 different species of lizards live in the same forest however are broadly divided into different sub regions, based on perch height and diameter preference \cite{lizard}. All of them feed mostly on the same ants, while each species is better suited for colonization in different regions of the forest, making them specialists. As such they sort according to their local advantage even though their food is globally present in the broad region. One could similarly assume that this would also apply for our specialist E. coli strains, expecting each strain to simply sort to where they have the advantage. The glutton strains grows fast when glucose is abundant, whereas the high affinity grows faster when it is scarce, resulting in a growth trade off a certain nutrient concentration $n^*$. The high affinity strain as such would mostly occupy the nutrient depleted interior and dead end while the glutton would dominate the nutrient rich opening. However perch heights in the lizard population sorting is static in space and time, our growth advantages are spatiotemporal as they change depending on the nutrient concentration.\\
+	\\
+	We consider a standard textbook reaction-diffusion system of growing populations \cite{Murray, Murray2}, Monod growth with a constant yield coupling the growth to nutrient consumption \cite{Monod, Lendenmann}, linear stability and bifurcation theory \cite{bifurcation}, Tilman's $R^*$ rule for resource competition \cite{rstar}, Wright and Neis $F_{ST}$ as a measure of spatial heterogeneity \cite{Nei} and finite volume methods for the numerics \cite{Leveque}. This much has been standard in the field for decades and is well studied. This thesis builds upon the continuum description of the Karitas Microfluidic Panflute \cite{Karita}. We adopt their dead end cavity geometry, boundary conditions, collective cell diffusion and parameters that were either measured experimentally or obtained numerically. For densities above the jamming threshold we use Slepukhins post jamming collective diffusion which is based on Karitas measurements, as well as the self diffusion description for single cells \cite{slepukhin}. In the theoretical approach to the resource competition problem and its mathematical description, the idea of following the ancestry of biomass backwards in time is taken from previous work of Hallatschek, Nelson, Durrett and Fan \cite{gene, lifeexp, tracer}. We add nutrient dependent dynamics with limited glucose diffusing into the cavity from the opening, as such growth is not constant anymore, as it is in Karita \cite{Karita}, but instead depends on the nutrient concentration in space and time. Now whether or not a population can become jammed in the first place is dependent on the nutrient supply no matter how long the cavity is. Just above the minimal nutrient supply needed for jamming, the transition from the gaseous phase is continuous, as opposed to the abrupt transition under nutrient rich conditions \cite{Karita}. The continuous jamming transition has previously been shown saturated growth by Peris Yagüe, however only qualitatively \cite{peris}. We quantify it by determining the continuous jamming window as a nutrient supply concentration interval for our E. Coli-Glucose system. We also derive an expression of how long a cavity must be to deplete the nutrient to a given point and show that the onset of colonization occurs through a transcritical bifurcation, which means that the two equilibrium states (empty and colonized) exchange stability. We found the sorting is not simply dominated by the local environment, in fact strains can dominate regions completely where they are locally disfavored. Making the sorting between strains inherently dependent on the history of selection and advection. Whether one strain wins or they end up being able to coexist depends heavily on the population state, i.e. if the community is jammed or dilute. We call it inverse sorting, as the strains sort inverse to their environmental advantage. We explain it with an ancestry kernel that traces the composition back to where and when the it grew and derive a criterion that decides from its history whether a region is inverse sorted or not.\\
+	\\
+	This thesis aims to answer the following questions: When does a nutrient limited cavity get colonized and is jamming still abrupt? How do two strains with crossing growth functions sort and is their composition set by the local environment? And can the composition be explained by its history?
 	\chapter{Model}
 	\label{model}
 	\section{Microbial communities inside cavities}
@@ -122,8 +134,8 @@
 	\begin{equation}
 		\rho=\rho(x,t)\in[0,1]
 	\end{equation}
-	In our idealized model no cells can be present at the opening, yielding the boundary condition of density $\rho(0,t)=0$. Nutrients are steadily supplied through the opening, set by nutrient concentration $n(0,t)=n_0$, making it the only continuous supply of food for the cells. Analogous to the Panflute model \cite{Karita}, we use the no flux condition at the closed end $J(L,t)=0$. Using Fick's first law of diffusion $J=-D\frac{d\phi}{dx}$, with the substrate concentration $\phi$ and diffusion $D$ \cite{Fick}, the no flux condition is equivalent to our two concentration gradients $n_x (L,t)=0$ and $\rho_x (L,t)=0$ making our system bounded by Dirichlet and Neumann boundary conditions \cite{Leveque}.
-	We work inside a one dimensional continuum model without considering individual cells, as such parameters from our model base \cite{Karita} \cite{slepukhin} require translation. The packing fraction $\Phi$ is defined in 3D as $\Phi=\rho V_{\rm cell}$ \cite{Karita} and in 2D as $\Phi=\rho A_{\rm cell}$ \cite{slepukhin} with a jamming transition at $\Phi_{\rm jam}=0.64$. So in their models the packing fraction and density are two separate variables. In a 1D continuum however it is opportune to choose $\Phi=\rho$, making the biomass density nondimensional and a cross section average. This convention allows us to eliminate cell size from the model completely while retaining the transport closures, since crowding depends on the amount of space occupied and not how many cells that fraction is divided into.\\
+	In our idealized model no cells can be present at the opening, yielding the boundary condition of density $\rho(0,t)=0$. Nutrients are steadily supplied through the opening, set by nutrient concentration $n(0,t)=n_0$, making it the only continuous supply of food for the cells. Analogous to the Panflute model \cite{Karita}, we use the no flux condition at the closed end $J(L,t)=0$ where $J$ denotes the biomass flux, the amount of biomass passing a point per time. Using Fick's first law of diffusion $J=-D\frac{d\phi}{dx}$, with the substrate concentration $\phi$ and diffusion $D$ \cite{Fick}, the no flux condition is equivalent to our two concentration gradients $n_x (L,t)=0$ and $\rho_x (L,t)=0$ making our system bounded by Dirichlet and Neumann boundary conditions \cite{Leveque}.
+	We work inside a one dimensional continuum model without considering individual cells, as such parameters from our model base \cite{Karita, slepukhin} require translation. The packing fraction $\Phi$ is defined in 3D as $\Phi=\rho V_{\rm cell}$ \cite{Karita} and in 2D as $\Phi=\rho A_{\rm cell}$ \cite{slepukhin}, where $\rho$ is the number of cells per volume or area and $V_{\rm cell}$ or $A_{\rm cell}$ the volume or area of one cell. The jamming transition is at $\Phi_{\rm jam}=0.64$, which is the random close packing for rigid same size hard spheres \cite{Karita}. So in their models the packing fraction and density are two separate variables. In a 1D continuum however it is opportune to choose $\Phi=\rho$, making the biomass density nondimensional and a cross section average. This convention allows us to eliminate cell size from the model completely while retaining the transport closures, since crowding depends on the amount of space occupied and not how many cells that fraction is divided into.\\
 	\\
 	Most notably we introduce nutrient limitation, with the concentration of nutrient given by
 	\begin{equation}
@@ -135,7 +147,7 @@
 \paragraph{Full nutrient coupled continuum model}
 \label{sec:full_model_new}
 
-Building on the general continuity equations of Karita \& Slepukhin \cite{Karita}\cite{slepukhin}. The biomass balance is
+Building on the general continuity equations of Karita \& Slepukhin \cite{Karita, slepukhin}. The biomass balance is
 \begin{equation}
 	\partial_t\rho+\partial_xJ_\rho=g(n)\rho,
 	\qquad
@@ -149,22 +161,20 @@ Building on the general continuity equations of Karita \& Slepukhin \cite{Karita
 	}
 	\label{eq:rho_pde_new}
 \end{equation}
-and the nutrient balance with Monod growth and a nutrient sink \cite{Monod}
+where $g(n)$ is the nutrient dependent growth rate (Monod law, $g(n)=\mu_{\max}\frac{n}{K_s+n}$), $J_\rho$ the biomass flux and $D_{\rm col}(\rho)$ the collective diffusivity, which sets how fast density differences even out when cells push each other (\cref{transport}).
+And the nutrient balance with Monod growth and a nutrient sink \cite{Monod}
 \begin{equation}
 	\partial_t n+\partial_xJ_n=-\frac{1}{Y}g(n)\rho,
 	\qquad
 	J_n=-D_n n_x,
 \end{equation}
-
+where $Y$ is the yield (biomass produced per nutrient consumed, \cref{sec:ecoli}) and $D_n$ the nutrient diffusion coefficient.
 \begin{equation}
 	{
 		\partial_t n=D_n n_{xx}-\frac{1}{Y}g(n)\rho.
 	}
 	\label{eq:n_pde_new}
 \end{equation}
-
-
-
 \paragraph{Steady state problem}
 \label{sec:steady_problem}
 
@@ -195,7 +205,7 @@ The steady state boundary conditions are
 	\label{eq:steady_bcs_new}
 \end{equation}
 \subsection{Resource competition}	
-We consider two strain densities individually as $\rho_1(x,t), \rho_2(x,t)$ with the total biomass packing fraction $\rho(x,t)=\rho_1(x,t)+\rho_2(x,t)$. For $\rho>0$ define the strain 1 fraction $f(x,t)=\frac{\rho_1(x,t)}{\rho(x,t)}$
+We consider two strain densities individually as $\rho_1(x,t)$ (scavenger), $\rho_2(x,t)$ (glutton) with the total biomass packing fraction $\rho(x,t)=\rho_1(x,t)+\rho_2(x,t)$. For $\rho>0$ define the strain 1 fraction $f(x,t)=\frac{\rho_1(x,t)}{\rho(x,t)}$
 and the centered dominance variable $h(x,t)=2f(x,t)-1$.
 So
 \begin{equation}
@@ -205,7 +215,7 @@ So
 \end{equation}
 As such for equally seeded strains, the initial condition is $f_0=\frac{1}{2}$ or $h_0=0$.
 \paragraph{Fluxes and transport}	
-The two strains share a total biomass flux \(J\), but also undergo relative self diffusion.\cite{Karita}
+The two strains share a total biomass flux \(J\), but also undergo relative self diffusion which is how fast single cells move relative to their neighbors \cite{Karita}. It mixes the strains without changing the total biomass (\cref{transport}).
 \begin{align}
 	J_1 &= fJ-\Dself(\rho)\rho\,\pd_x f,
 	\label{eq:J1}\\
@@ -215,7 +225,7 @@ The two strains share a total biomass flux \(J\), but also undergo relative self
 \begin{equation}
 	J_1+J_2=J.
 \end{equation}
-The total flux is collective diffusion down the total density gradient \cite{Karita} \cite{slepukhin} \cite{Fick}
+The total flux is collective diffusion down the total density gradient \cite{Karita, slepukhin, Fick}
 \begin{equation}
 	J=-\Dcol(\rho)\pd_x\rho.
 	\label{eq:total-J}
@@ -255,11 +265,10 @@ For the relative self diffusion term the boundary condition is no relative flux:
 	\section{Escherichia coli strains consuming Glucose} 
 	\label{sec:ecoli} 
 	\paragraph{Monod Parameters}
-	Maximum growth rates for several E. coli mutant strains in sugar have been extensively measured by Steinsiek \& Bettenbrock \cite{Steinsiek}, we model K12 MG1655 strains and its genetic derivatives. The isogenic ptsG mutant has a maximum growth rate of $\mu_{1}=0.21 \mathrm{h^{-1}}$ while its parent MG1655 was measured to possess a maximum growth rate of $\mu_{2}=0.78\mathrm{h^{-1}}$ at full saturation. Assuming crossing growth functions set by sufficiently differing half-velocity constants $K$ in the Monod growth law makes the parent a glutton and the ptsG mutant the scavenger in their relationship as they compete for the same glucose nutrient source. The Monod constants $K$ however have not been measured directly in this paper, so the classification of glutton vs scavenger remains a design choice rather than being directly biologically grounded in their experiments. We choose the Monod constants $K_{1}=0.2 \mathrm{\mu M}$ and $K_{2}=15 \mathrm{\mu M}$ to design the crossover.
+	Maximum growth rates for several E. coli mutant strains in sugar have been extensively measured by Steinsiek \& Bettenbrock \cite{Steinsiek}, we model K12 MG1655 strains and its genetic derivatives. The isogenic ptsG mutant, which lacks the gene for its main glucose transporter while otherwise being genetically identical, has a maximum growth rate of $\mu_{1}=0.21 \mathrm{h^{-1}}$ while its parent MG1655 was measured to possess a maximum growth rate of $\mu_{2}=0.78\mathrm{h^{-1}}$ at full saturation. Assuming crossing growth functions set by sufficiently differing half-saturation constants $K$ in the Monod growth law, which is the nutrient concentration at which growth reaches half of the maximum, makes the parent a glutton and the ptsG mutant the scavenger in their relationship as they compete for the same glucose nutrient source. The Monod constants $K$ however have not been measured directly in this paper, so the classification of glutton vs scavenger remains a design choice rather than being directly biologically grounded in their experiments. We choose the Monod constants $K_{1}=0.2 \mathrm{\mu M}$ and $K_{2}=15 \mathrm{\mu M}$ to design the crossover.
 	\paragraph{Yield}
-	The Yield coefficient, more generally, is the weight of bacteria formed by the weight of nutrient consumed \cite{Murray2}. As such it is inherently coupled to a cells growth rate, marking how much E. coli biomass has grown from the amount of glucose that was eaten. For E. coli in glucose the yield has been measured as $Y_{X/S}=0.45 \pm 0.03\ \mathrm{g(DW)\cdot g(sugar)^{-1}}$ by Lendenmann \cite{Lendenmann}. To fit our model this needs to be rescaled to biomass density or packing fraction per $\mu M$, so $Y=\frac{Y_{X/S}M}{\rho_{dry}} \times 10^{-6}\mathrm{\mu M^{-1}}=2.895 \times 10^{-7}\mathrm{\mu M^{-1}}$ with the molar mass of glucose $M=180.16 \mathrm{g/mol}$ and E. coli dry mass $\rho_{dry}=280 \mathrm{g/L}$.
-	%https://bionumbers.hms.harvard.edu/bionumber.aspx?id=103904&ver=17 probably needs a different source, dry mass. Value is under the assumption of cell size 1 um^3
-	%https://en.wikipedia.org/wiki/Glucose, glucose molar mass
+	The Yield coefficient, more generally, is the weight of bacteria formed by the weight of nutrient consumed \cite{Murray2}. As such it is inherently coupled to a cells growth rate, marking how much E. coli biomass has grown from the amount of glucose that was eaten. For E. coli in glucose the yield has been measured as $Y_{X/S}=0.45 \pm 0.03\ \mathrm{g(DW)\cdot g(sugar)^{-1}}$ (g dry weight (DW) of biomass per g sugar, $X$ biomass, $S$ substrate) by Lendenmann \cite{Lendenmann}. To fit our model this needs to be rescaled to biomass density or packing fraction per $\mu M$, so $Y=\frac{Y_{X/S}M}{\rho_{dry}} \times 10^{-6}\mathrm{\mu M^{-1}}=2.895 \times 10^{-7}\mathrm{\mu M^{-1}}$ with the molar mass of glucose $M=180.16 \mathrm{g/mol}$ and E. coli dry mass $\rho_{dry}=280 \mathrm{g/L}$.
+
 	\paragraph{Nutrient diffusivity}
 	How fast nutrients diffuse would normally depend on biomass density, however for simplicity's sake we assume it to be constant. For our nutrient glucose, the diffusion constant of it in water is given by Stewart \cite{stewart} at $25\,^\circ\mathrm{C}$ as $D_n=6.7 \times 10^{-6}  \mathrm{cm^2/s}=2.4 \times 10^6 \mathrm{\mu m^2/h}$. An additional factor can typically vary between 0.2 and 0.8 depending on the population state in biofilm, as such we take the average for our cavity and use $D_n=1.2 \times 10^6 \mathrm{\mu m^2/h}$.
 	
@@ -270,14 +279,14 @@ For the relative self diffusion term the boundary condition is no relative flux:
 	\label{sec:invariant_new}
 	\paragraph{Pressure potential in the density variable}
 	\label{sec:pressure_potential_new}
-	We define the pressure potential, as in \cite{Karita} \cite{slepukhin}
+	We define the pressure potential, as in \cite{Karita, slepukhin}.
 	\begin{equation}
 		{
 			\Psi(\rho)=\int_0^\rho D_{\rm col}(s)\,ds.
 		}
 		\label{eq:Psi_def_new}
 	\end{equation}
-	which allows us to rewrite the governing equation of our system as one invariant \cref{invariant}
+	It is called that because $\Psi$ acts as a pressure, the flux is $J_\rho=-\partial_x\Psi$ so biomass flows from high to low $\Psi$. This allows us to rewrite the governing equation of our system as one invariant, which is a quantity that takes the same value at every position \cref{invariant}
 	\begin{equation}
 		{
 			\Psi(\rho(x))+YD_n n(x)=YD_n n_0.
@@ -295,10 +304,11 @@ It holds to numerical precision with a residual of $10^{-16}$ \ref{fig:steadyclo
 			\frac{dp}{\sqrt{2\int_p^{p_*}g(n(s))\rho(s)\,ds}}.
 		}
 	\end{equation}
+where $p=\Psi(\rho)$ and $p_*=\Psi(\rho)$ (\cref{plane}). This is the shortest cavity whose closed end reaches $n_*$.
 \begin{figure}
 	\centering
 	\includegraphics[width=\linewidth]{steady_lstar_general}
-	\caption{(a) Numerical test of $L_*$ quadrature against direct solution at varying $n_0$, (b) the error remained well below 1\% indicating agreement. The $n_0=1500$ case contains a fold, meaning disagreement is not an error since there are multiple solutions, which will be discussed in a later section in detail \ref{sec:jamfold}.}
+	\caption{(a) Numerical test of $L_*$ quadrature against direct solution at varying $n_0$, (b) the error remained well below 1\% indicating agreement. The $n_0=1500$ case contains a fold,  i.e. the $\rho(L)$ curve bends backwards so multiple steady states exist at the same length, meaning disagreement is not an error since there are multiple solutions, which will be discussed in a later section in detail \ref{sec:jamfold}.}
 	\label{fig:steadylstargeneral}
 \end{figure}
 \FloatBarrier
@@ -354,7 +364,7 @@ It holds to numerical precision with a residual of $10^{-16}$ \ref{fig:steadyclo
 	\label{fig:steadybudget}
 \end{figure}	
 	As such by comparing $A$ and $B$ you can predict whether there are enough nutrients for the cavity to jam, i.e. $A<B$ dilute (insufficient budget) and $A>B$ jamming possible for a long enough cavity (exceeding budget) \ref{sec:Ljam_finite}. For $A=B$ the nutrient would be exactly depleted and as such would require an infinitely long cavity \ref{sec:n0}.
-	Since we know the jamming density, $B$ can be calculated with a CAS using $D_{\mathrm col}(\rho_{\mathrm jam})=0.6864\,D_0=258.1\ \mu\mathrm{m}^2/\mathrm{h}$, so the price it costs to reach jamming is $B=\int_0^{\rho_{\mathrm jam}}\!D_{\mathrm col}(s) ds=0.7226\,D_0=271.7\ \mu\mathrm{m}^2/\mathrm{h}$. So in our system the minimum nutrient that needs to be supplied through the opening is $n_0^{\mathrm{crit}}=\frac{0.7226\,D_0}{Y D_n}=782.1 \mathrm{\mu M}$. However $A$ is the budget available to the colony, the amount actually used depends on the cavity length. \\
+	Since we know the jamming density, $B$ can be calculated with a Computer algebra system using $D_{\mathrm col}(\rho_{\mathrm jam})=0.6864\,D_0=258.1\ \mu\mathrm{m}^2/\mathrm{h}$ with $D_0=376 \,\mu\mathrm{m}^2/\mathrm{h}$ \cite{Karita}, so the price it costs to reach jamming is $B=\int_0^{\rho_{\mathrm jam}}\!D_{\mathrm col}(s) ds=0.7226\,D_0=271.7\ \mu\mathrm{m}^2/\mathrm{h}$. So in our system the minimum nutrient that needs to be supplied through the opening is $n_0^{\mathrm{crit}}=\frac{0.7226\,D_0}{Y D_n}=782.1 \mathrm{\mu M}$. However $A$ is the budget available to the colony, the amount actually used depends on the cavity length. \\
 	\\As such we define the effective budget $A_{\mathrm eff}=YD_n(n_0-n(L))$ with $0\le A_{\mathrm eff}<A$ and thus the maximal density in the cavity is $\rho(x)\le\rho_{\mathrm max}=\Psi^{-1}(A_{\mathrm eff}(L))$. So a sufficient nutrient supply and long enough cavity is necessary for jamming. As such the cavity can only jam if $A_{\mathrm eff}>B$, a definitive criterion for jamming.
 	\subsection{Monotonicity}
 	\label{sec:monotonicity_new}
@@ -405,7 +415,7 @@ It holds to numerical precision with a residual of $10^{-16}$ \ref{fig:steadyclo
 	The biomass current is represented by an advective velocity $J_\rho=\rho_{j}v$ with $\partial_x(\rho_{j}v)=g(n)\rho_{j}$,
 	so $v_x=g(n)$.
 	The nutrient equation becomes $D_n n_{xx}=\frac{\rho_{j}}{Y}g(n)$.
-	Under $g(n)\approx kn$ we get a Helmholtz equation of the form
+	Under $g(n)\approx kn$ with $k=\mu_{\max}/K_s$ we get a Helmholtz equation of the form
 	\begin{equation}
 		n_{xx}-\kappa_{j}^2n=0,
 		\qquad
@@ -434,14 +444,14 @@ It holds to numerical precision with a residual of $10^{-16}$ \ref{fig:steadyclo
 			\caption{}
 			\label{fig:jamk}
 		\end{subfigure}
-		\caption{Analytical jammed prediction vs solver solution, (a) Analytical nutrient concentration prediction against the direct numerical solution over position on a log-scale, (b) Predicted slope against numerical solution.}
+		\caption{Analytical jammed prediction vs solver solution, (a) Analytical nutrient concentration prediction against the direct numerical solution over position on a log-scale, (b) Predicted slope against numerical solution over position along the cavity.}
 		\label{fig:jam}
 	\end{figure}
 	The analytical prediction assumes $n(x)\ll K_s$ to linearise the Monod kinetics which overpredicts consumption and a constant density. Near the opening neither of these assumptions are fulfilled, leading to a massive regional error \ref{fig:jam}. However the shape of the decay rate is correct as it holds for the valid $n(x)<K_s$ region \ref{fig:jamk}. The $cosh$ profile also holds numerically, showing both solutions to be parallel to one another \ref{fig:jamn}, the offset is due to the large error in the opening region. So the analytical solution predicts the correct behavior and shape, however is too oversimplified to give correct values throughout. We can confidently conclude that the nutrient concentration decays exponentially in a opening fed dead end cavity.
 	\subsection{The Dilute Establishment Regime}
 	\label{sec:dilute_establishment}
 	Now we consider the opposite regime with small biomass density, weak nutrient depletion or small nutrient supply and
-	establishment from an initially dilute population. When populations are in dilute state the diffusion approximately becomes scalar $D_{\mathrm col}=D_0$, simplifying our expressions \ref{dilute}. The nutrient equations thus reduces to
+	establishment from an initially dilute population. When populations are in dilute state the diffusion approximately becomes constant $D_{\mathrm col}=D_0$, simplifying our expressions \ref{dilute}. The nutrient equations thus reduces to
 \begin{equation}
 	{
 		n''=\frac{g(n)}{D_0}\bigl(n_0-n\bigr).
@@ -493,7 +503,7 @@ or if in addition the nutrient supply is also much lower than the cells saturati
 	\begin{figure}
 		\centering
 		\includegraphics[width=\linewidth]{steady_lstar_dilute}
-		\caption{(a) Dilute $L*$ for varying $n_0$ against direct numerical solution, general dilute approximation (stripes) and with linearized Monod law (dotted), (b) Direct difference between numerical solution and formula prediction.}
+		\caption{The general $L_*$ form holds agreement to numerical precision, while the approximations only hold conditionally. (a) Dilute $L_*$ (solid) for $n_0=0.15,1.5,15,150,1500 \mathrm{\mu M}$ against direct numerical solution (circles), general dilute approximation (stripes) and with linearized Monod law (dotted) over $n_*/n_0$, (b) Agreements fraction between the numerical solution and the dilute approximation formula prediction for $n_0=15,782.49 \mathrm{\mu M}$ once with constant diffusion approximation (blue) and once additionally with linearized Monod kinetics (red) over $n_0$.}
 		\label{fig:steadylstardilute}
 	\end{figure}
 	\FloatBarrier
@@ -573,7 +583,7 @@ g(n)\approx kn,
 		{\;L_{\rm onset}=\frac{\pi}{2}\sqrt{\frac{D_0}{g(n_0)}}\;}
 		\label{eq:Lonset}
 	\end{equation}
-	giving us the minimal length a cavity needs to be in order to support a steady colony of bacteria. For a constant growth rate, this reduces identically to the establishment reported and measured by Karita \cite{Karita}.
+	giving us the minimal length a cavity needs to be in order to support a steady colony of bacteria. For a constant growth rate, this reduces identically to the establishment length reported and measured by Karita \cite{Karita}.
 	This transition can also be expressed using the Damköhler number which compares the diffusive time $L^2/D_0$ with the growth time $1/g(n_0)$
 	\begin{equation}
 		\mathrm{Da}_0:=\frac{g(n_0)L^2}{D_0},
@@ -599,20 +609,19 @@ g(n)\approx kn,
 	\begin{figure}
 		\centering
 		\includegraphics[width=0.7\linewidth]{onset_law_validation}
-		\caption{Transcritical onset law against numerical solution.}
+		\caption{Transcritical onset law against the direct numerical solution, the general $\delta_L$ holds to numerical precision in both regimes, while dilute approximation only holds in its designed regime. General (blue, solid) and dilute (red, dotted) $\delta_L$ against the direct numerical solve (circles) in the (a) Dilute regime ($n_0=15 \mathrm{\mu M}$) and in the (b) Jammed regime with $n_0=1000 \mathrm{\mu M}$.}
 		\label{fig:steadyvalidation}
 	\end{figure}
-\newpage
+\FloatBarrier
 	\subsubsection{Jamming transition}
 	\label{sec:jamfold}
 
 	\begin{figure}
 		\centering
 		\includegraphics[width=\linewidth]{steady_fold}
-		\caption{(a) density $\rho$ over cavity length $L$, showing three solutions for $L=38 \mu m$ indicating multistability producing a fold at jamming transition, two stable and one unstable state, (b) density $\rho$ over cavity length for varying $n_0$, examples with and without fold, (c) Tipping points of the fold, (d) how window width and tipping point separation scales with $n_0-n_0^{*}$.}
+		\caption{(a) density $\rho$ over cavity length $L$, showing three solutions for $L=38 \mu m$ indicating multistability producing a fold at jamming transition, two stable and one unstable state, (b) density $\rho$ over cavity length for varying $n_0$, examples with and without fold, (c) Tipping points of the fold, (d) how window width and tipping point separation scales with $n_0-n_0^{*}$ (\cref{sec:tipping}).}
 		\label{fig:steadyfold}
 	\end{figure}
-	\FloatBarrier
 	In nutrient limited populations an abrupt jamming transition is not guaranteed, in fact there is a window where the jamming transition is continuous. The collective diffusion is non-monotone, with a sub-jammed peak at roughly $\rho\approx0.253$ \ref{fig:steadyclosures} and falling afterwards until it reaches jamming where the diffusivity skyrockets. Meaning that after this point, as crowding accumulates diffusive loss to the opening goes down, which again leads to increased crowding, a positive feedback loop. The system is characterized as a steady state when the diffusive loss to the opening matches new cell growth in the colony, however once bacteria reach a stable jammed state it is not easily revertible \cite{Karita}. So in nutrient rich conditions increasing cavity length leads to a discontinuous abrupt jump from a dilute to a jammed state. When $L$ is decreased back down to the same value where it was dilute earlier, the cavity remains jammed, indicating bistability. A return to a dilute population requires a lower value of $L$, see figure \ref{fig:steadyfold} panel (a), between the two tipping points three steady states coexist, of which the outer two are stable and the middle one is not.\\
 \\
 	This however only happens, if cells keep growing strongly in the deep end, since if cells as they approach a jammed state simultaneously also produce less biomass there is not much to be lost to the opening to keep a steady profile. The positive feedback loop has nothing to amplify, since if there is barely enough nutrients to reach jamming there is no excess that the opening fails to remove through diffusion. The nutrient budget available to cells is nearly completely spent by the time the population reaches jamming, so the monotone nutrient profile goes to zero along the cavity making the densest cells at the dead end starved. While the cells that actually still produce biomass don't sit at the dead end, making the transition to reach a steady jammed state smooth. The effective nutrient budget $A_{\mathrm eff}$ fixes the nutrients available at the dead end $n(L) = n_0 - n_0^{\mathrm{crit}}$. So a nutrient exhausted (e.g. $n_0=782.49 \mu M$, $n(L)=0$) jamming transition is gradual and completely continuous, see \ref{fig:steadyfold}, panel (b), case $n_0=782 \mu M$. We can conclude that a fold requires enough nutrients at the closed end of the cavity for there to be a phase in which the dead-end cells outproduce the interior and near opening regions.
@@ -667,7 +676,7 @@ Not every population is equally strongly sorted, in a jammed colony inside a ver
 		}
 		\label{eq:f-equation}
 	\end{equation}	
-	The sign of the variable \(h=2f-1\) gives local dominance
+	with $u=J/\rho$ biomass velocity and the selection coefficient $s(n) = g_1(n)-g_2(n)$. The sign of the variable \(h=2f-1\) gives local dominance
 	\begin{equation}
 		{
 			\pd_t h=\Lop_t h+\frac12(1-h^2)s(n),
@@ -696,10 +705,9 @@ Not every population is equally strongly sorted, in a jammed colony inside a ver
 		}
 		\label{eq:duhamel-kernel2}
 	\end{equation}
-	This is a deterministic Greens function representation of the continuum ancestry dynamics. The first
-	term is the neutral transport of the initial dominance field. The second term
+	This is a deterministic Greens function representation of the continuum ancestry dynamics with the ancestry kernel $K(y,t\mid x,T)$. The first term is the neutral transport of the initial dominance field. The second term
 	is the neutral transport from every earlier space time point \((y,t)\) to the
-	final point \((x,T)\) of the realized local selection source. $K$ weights the contribution of an earlier point in time to a final point in time as a distribution, it is normalized and non-negative. It is analogous to the backwards density $G(\xi,\tau\mid x,t)$ by Nelson \& Hallatschek \cite{gene} \cite{lifeexp}. The Duhamel solution is implicit in its nature.
+	final point \((x,T)\) of the realized local selection source. $K$ weights the contribution of an earlier point in time to a final point in time as a distribution, it is normalized and non-negative. It is analogous to the backwards density $G(\xi,\tau\mid x,t)$ by Nelson \& Hallatschek \cite{gene, lifeexp}. The Duhamel solution is implicit in its nature.
 	\begin{figure}[htbp]
 		\centering
 	\begin{subfigure}{0.45\textwidth}
@@ -715,7 +723,7 @@ Not every population is equally strongly sorted, in a jammed colony inside a ver
 		\caption{Jammed, $T=2000h, n_0=1000 \mathrm{\mu M}$}
 		\label{fig:hjam}
 	\end{subfigure}
-	\caption{Analytical solution of the dominance variable at a fixed point in time against direct numerical solution in the dilute and jammed regime. The inverse sorted sections are shaded blue.}
+	\caption{Analytical solution of the dominance variable at a fixed point in time against direct numerical solution in the dilute (a) and jammed regime (b) with the initial condition $h_0=0$. The inverse sorted sections are shaded blue. (Top) Profile of the dominance variable h over position in the cavity, direct numerical solve $h_\mathrm{sim}$ (black, solid), Duhamel formula analytical prediction $h_\mathrm{theory}$ (\eqref{eq:duhamel-kernel2}) (orange, dashed) and the weak selection approximation $h_\mathrm{weak}$ (\eqref{eq:weak-continuum}) (gray, dotted). (Bottom) Residual of $h_\mathrm{theory}$ compared to the numerical solve over position. The jammed regime has very strong selection, as such the weak selection approximation has huge errors and was excluded from the figure. In the dilute regime $h_\mathrm{weak}$ correctly predicts the shape and near mouth region, however overall it still has significant deviation from the numerical solve, so it is only useful for the opening region and the qualitative picture. The significant error near in the jammed regime within $x=0-400 \mathrm{\mu m}$ is due the same numerical diffusion problem, however it is shown to converge to the numerical solution with a finer mesh $dx$ (\cref{convergence}, \cref{fig:adjointconvergenceoverlay}).}
 \end{figure}
 	\label{fig:h}
 	\subsubsection{Weak selection approximation}
@@ -820,17 +828,17 @@ Not every population is equally strongly sorted, in a jammed colony inside a ver
 		\caption{Jammed, $T=2000h, n_0=1000 \mathrm{\mu M}$}
 		\label{fig:ajam}
 	\end{subfigure}
-	\caption{Exposure decomposition to categorize inverse sorting.}
+	\caption{Exposure decomposition to categorize inverse sorting, the inverse sorted regions are shaded blue. (Top) The reinforcing exposure $A_+$ (blue) and the opposing exposure $A_-$ over position in the cavity at final time. (Bottom) The observed exposure $\sigma_T h$ (black, solid) and the theoretical exposure composition $A_+-A_-$ (orange, dashed). The discrepancy in the jammed case is the same numerical diffusion problem described earlier.}
 \end{figure}
 \label{fig:a}
 \subsection{Numerical physiology}
 \paragraph{Varying seed}
-The main simulations all considered an invasion colonization though the opening, equally seeded strains and a very low initial biomass. A larger seed colonizing a cavity results in accelerated dynamics, the result however remains the same in a dilute setting with the Tilman $R^*$ $F_1=1$ limit. With a large enough seed density of $\rho_{\mathrm{seed}}=0.01$ the initial nutrient expansion phase that usually results in the inverse sorted glutton graveyard in the deep end can be skipped entirely and the high affinity strain takes over right from the start monotonically \ref{fig:dilutedensity}. In the jammed case it shifts to being slightly in favor of the high affinity strain, however behavior is identical \ref{fig:jamdensity}. Rigging the game from the start by seeding more of one strain over the other, i.e. varied $f_1$ of the seed, had little effect on the general dynamic process apart from favoring the advantaged strain. Even with a $f_1=0.9$ seed, as long as it is small the nutrient expansion phase of the glutton is inevitable \ref{fig:seedf1}. Changing the colonization type by comparing the invasion to an uniformly seeded biomass along the entire cavity and one starting from the deep end had no strong effect in the jammed cavity \ref{fig:seedmode}. In a dilute cavity a deep or uniform seed does eridicate the initial glutton expansion. As seen in panel (C) with deeply seeded biomass or a uniform distribution, initially during the early phase there is more normally sorted biomass in the dilute case. The victory of the high affinity strain is undisputed, all of them have the same $F_1=1$ limit. In the jammed case there is almost no difference, the only one being by placing some of the high affinity strain inside the cavity by a uniform seed gives it a slight advantage.
+The main simulations all considered an invasion colonization though the opening, equally seeded strains and a very low initial biomass. A larger seed colonizing a cavity results in accelerated dynamics, the result however remains the same in a dilute setting with the Tilman $R^*$ $F_1=1$ limit. With a large enough seed density of $\rho_{\mathrm{seed}}=0.01$ (the peak density of the initial seed, \cref{dependence}) the initial nutrient expansion phase that usually results in the inverse sorted glutton graveyard in the deep end can be skipped entirely and the high affinity strain takes over right from the start monotonically \ref{fig:dilutedensity}. In the jammed case it shifts to being slightly in favor of the high affinity strain, however behavior is identical \ref{fig:jamdensity}. Rigging the game from the start by seeding more of one strain over the other, i.e. varied $f$ of the seed, had little effect on the general dynamic process apart from favoring the advantaged strain. Even with a $f_1=0.9$ seed, as long as it is small the nutrient expansion phase of the glutton is inevitable \ref{fig:seedf1}. Changing the colonization type by comparing the invasion to an uniformly seeded biomass along the entire cavity and one starting from the deep end had no strong effect in the jammed cavity \ref{fig:seedmode}. In a dilute cavity a deep or uniform seed does eridicate the initial glutton expansion. As seen in panel (C) with deeply seeded biomass or a uniform distribution, initially during the early phase there is more normally sorted biomass in the dilute case. The victory of the high affinity strain is undisputed, all of them have the same $F_1=1$ limit. In the jammed case there is almost no difference, the only one being by placing some of the high affinity strain inside the cavity by a uniform seed gives it a slight advantage.
 \paragraph{Initial nutrients}
 Changing the initial conditions of nutrients, i.e. if the cavity is filled with food from the start, empty or linearly distributed across, was found to have no measurable effect in both the dilute and jammed regime \ref{fig:nutrientic}.
 \subsubsection{Biomass production}
 \label{sec:prod}
-In both the dilute and jammed regime biomass is almost exclusively being produced near the opening, due to the absolute growth rate being too low in the interior and the deep end \ref{fig:g}. Biomass production is defined as $P=\rho_{i} g_{i} q$. So which strain is being mass produced is set almost entirely by the position of the $n^*$ front at the opening. So early on in the dilute regime the crossover is still in the interior, such that the glutton is a strong favorite in selection and as such gets mass produced while the high affinity strain gets left behind. As time goes on the front moves towards the opening, resulting in a recovery and eventual global domination of the high affinity strain which originates from just behind the crossover near the opening later in time. After 500 hours of dilute colonization, $90\%$ of produced biomass was made in the interval between $0\mathrm{\mu m}\le x\le 75 \mathrm{\mu m}$ \ref{fig:gdil}, panel (D), in a jammed cavity it is even more narrow with $0\mathrm{\mu m}\le x\le 63 \mathrm{\mu m}$ after 2000 hours \ref{fig:gjam}, panel (D). This has previously been observed in oxygen limited biofilm protein synthesis, where production was observed in a narrow band between oxygen supply and biofilm bulk \cite{produ}.
+In both the dilute and jammed regime biomass is almost exclusively being produced near the opening, due to the absolute growth rate being too low in the interior and the deep end \ref{fig:g}. Biomass production is defined as $P=\rho_{i} g_{i} q$ for strain $i$, where $q \leq 1$ is a numerical growth cap equal to 1 in all main runs (\cref{eq:q}). So which strain is being mass produced is set almost entirely by the position of the $n^*$ front at the opening. So early on in the dilute regime the crossover is still in the interior, such that the glutton is a strong favorite in selection and as such gets mass produced while the high affinity strain gets left behind. As time goes on the front moves towards the opening, resulting in a recovery and eventual global domination of the high affinity strain which originates from just behind the crossover near the opening later in time. After 500 hours of dilute colonization, $90\%$ of produced biomass was made in the interval between $0\mathrm{\mu m}\le x\le 75 \mathrm{\mu m}$ \ref{fig:gdil}, panel (D), in a jammed cavity it is even more narrow with $0\mathrm{\mu m}\le x\le 63 \mathrm{\mu m}$ after 2000 hours \ref{fig:gjam}, panel (D). This has previously been observed in oxygen limited biofilm protein synthesis, where production was observed in a narrow band between oxygen supply and biofilm bulk \cite{produ}.
 \begin{figure}[htbp]
 	\centering
 	\begin{subfigure}{\textwidth}
@@ -846,11 +854,11 @@ In both the dilute and jammed regime biomass is almost exclusively being produce
 		\caption{Jammed, $T=2000h, n_0=1000 \mathrm{\mu M}$}
 		\label{fig:gjam}
 	\end{subfigure}
-	\caption{Where biomass is actually produced, production as a heatmap over position and time. (A) Biomass production of the high affinity strain as position over time, (B) Biomass production of the glutton strain as position over time, (C) Selective production $P_1-P_2$ as position over time, (D) Production of all biomass made until final time over position.}
+	\caption{Where biomass is actually produced, production as a heatmap over position and time. (A) Biomass production of the high affinity strain as position $x$ over time $t$, (B) Biomass production of the glutton strain as position $x$ over time $t$, (C) Selective production $P_1-P_2$ as position $x$ over time $t$, (D) Production of all biomass made until final time $T$ over position $x$.}
 \end{figure}
 \label{fig:g}
 \FloatBarrier
-But most biomass that was produced does not survive, it instead gets washed out. In the dilute case only $12.1\%$ of produced biomass actually survived until final time, while in the longer jammed case only $3.4\%$ survives. As such it is more accurate to look at the production of the surviving population. The surviving population was produced a bit further into the cavity, since if a cell was produced further from the washout opening it has a higher chance of survival.
+But most biomass that was produced does not survive, it instead gets washed out. In the dilute case only $12.1\%$ of produced biomass actually survived until final time, while in the longer jammed case only $3.4\%$ survives (\cref{fig:survival}). As such it is more accurate to look at the production of the surviving population. The surviving population was produced a bit further into the cavity, since if a cell was produced further from the washout opening it has a higher chance of survival.
 \begin{figure}[htbp]
 	\centering
 	\begin{subfigure}{\textwidth}
@@ -866,14 +874,14 @@ But most biomass that was produced does not survive, it instead gets washed out.
 		\caption{Jammed, $T=2000h, n_0=1000 \mathrm{\mu M}$}
 		\label{fig:survivaljam}
 	\end{subfigure}
-	\caption{In what interval was the surviving biomass produced, y-axis: how much of the population was produced from the interval from 0 to x, x-axis: position in the cavity. Grey denotes all biomass produces, blue the survivors and red the position of the current population occupying the cavity.}
+	\caption{In what interval was the surviving biomass produced, y-axis: how much of the population was produced from the interval from 0 to x, x-axis: position in the cavity. Grey denotes all biomass produces, blue the survivors and red the position of the current population occupying the cavity. (1) Normalised profile over position $x$, (2) Cumulative fraction of where $90\%$ of the surviving biomass was produced over position $x$ in the cavity, (3) Fraction of the surviving biomass produced at position $x$ that is still present at final time, the average survival rate is dotted blue, (d) Normalized production profiles split between strains, glutton (red) and high affinity scavenger (blue), the production bands are shaded in the respective color. }
 \end{figure}
 \label{fig:survival}
 \FloatBarrier
 	\chapter{Methods}
 	\section{Transport closures}
 	\label{transport}
-	Following Slepukhin (Eq.~16)\cite{slepukhin} the collective diffusivity penalizes densities above $\rho_{\mathrm jam}$: below jamming it is the Richardson-Zaki \cite{zaki} \cite{Karita} mobility $\mu(\Phi)=\mu_0(1-\Phi)^{\eta}$ times the Carnahan-Starling equation of state for rigid hard spheres and above jamming an incompressible branch pins $\rho$ near $\rho_{\mathrm jam}$,
+	Following Slepukhin (Eq.~16)\cite{slepukhin} the collective diffusivity penalizes densities above $\rho_{\mathrm jam}$: below jamming it is the Richardson-Zaki \cite{zaki, Karita} mobility $\mu(\Phi)=\mu_0(1-\Phi)^{\eta}$ ($\mu_0$ dilute mobility) times the Carnahan-Starling equation of state for rigid hard spheres \cite{carnahan} and above jamming an incompressible branch pins $\rho$ near $\rho_{\mathrm jam}$,
 	\begin{equation}
 		{
 			D_{\rm col}(\rho)
@@ -885,13 +893,15 @@ But most biomass that was produced does not survive, it instead gets washed out.
 		\qquad 0\le \rho<\rho_{\rm jam}.
 		\label{eq:Dcol_slepukhin_closure}
 	\end{equation}
+Richardson-Zaki describes how particles slow down as packing increases and
+Carnahan-Starling how the pressure of hard spheres rises with packing \cite{zaki,carnahan,Karita}. 
 	Let $D_0$ denote the dilute diffusivity, $\mu$ the collective
 	mobility and $dP$ is the osmotic compressibility factor. With
 	\begin{equation}
-		D_{\rm col}(0)=D_0.
+		D_{\mathrm col}(0)=D_0.
 		\label{eq:Dcol_dilute_normalization}
 	\end{equation}
-	The jamming transition of hard spheres
+	, the osmotic compressibility factor
 	\begin{equation}
 		dP(\Phi)
 		=
@@ -900,7 +910,7 @@ But most biomass that was produced does not survive, it instead gets washed out.
 		\frac{6\Phi}{\pi}\partial_\Phi A(\Phi),
 		\label{eq:dP_definition}
 	\end{equation}
-	with the Carnahan–Starling compressibility factor \cite{carnahan}
+	and the Carnahan–Starling compressibility factor \cite{carnahan}
 	\begin{equation}
 		A(\Phi)=
 		\frac{1+\Phi+\Phi^2-\Phi^3}{(1-\Phi)^3}.
@@ -916,7 +926,7 @@ But most biomass that was produced does not survive, it instead gets washed out.
 		\label{eq:Dcol}
 	\end{equation}
 	where $D_{col}(\rho_{\mathrm jam})$ is the sub-jamming value at $\rho=\rho_{\mathrm jam}$ \ref{subsec:Dcol_derivation}.
-	Self diffusivity of single cells from the IBM simulation \cite{slepukhin} is adapted to our continuum model
+	Self diffusivity of single cells from the Individual-based model simulation \cite{slepukhin} is adapted to our continuum model
 	\begin{equation}
 		D_{\rm self} = D_0
 		\begin{cases}
@@ -1083,7 +1093,7 @@ So for $\rho_0=0$ the threshold length is
 	}
 	\label{eq:Lstar_exact_new}
 \end{equation}
-\section{Approximations and $L^*$ in the dilute regime}
+\section{Approximations and $L_*$ in the dilute regime}
 \label{dilute}
 \paragraph{Closed-end density in the dilute regime}
 For a prescribed nutrient threshold $n_*$, the closed-end density is
@@ -1255,7 +1265,7 @@ and
 	\section{Tipping points and window width}
 \label{sec:tipping}
 It has previously been demonstrated qualitatively that growth saturation can lead to the breakdown of the fold and thus a continuous jamming transition \cite{peris}. It is however decisively not a transcritical bifurcation, since there is no exchange of stability between crossing branches. The $L(\rho)$ function collapses to a vertical section, two folds annihilating each other to form a monotone branch is a cusp.
-At fixed $n_0$ \eqref{eq:Lstar_exact_new} is a map $p_*\mapsto L_*(p_*;n_0)$ with the inverse being the branch of \cref{fig:steadyfold}(a).  This is the sojourn time reduction Karita \cite{Karita} (eq. 31) use to compute their phase diagram with the potential $U(p)=\int_0^pg(n(s))\rho(s)\dd s$.
+At fixed $n_0$ \eqref{eq:Lstar_exact_new} is a map $p_*\mapsto L_*(p_*;n_0)$ with the inverse being the branch of \cref{fig:steadyfold}(a).  This is the sojourn time reduction Karita \cite{Karita} (SI eq. 31) use to compute their phase diagram with the potential $U(p)=\int_0^pg(n(s))\rho(s)\dd s$.
 The fold appears due to the falling section in the non-monotone collective diffusion function. In their constant growth model a fold either exists or does not exist, nutrient limitation can quantify when the fold is born. A tipping point is $\pd L_*/\pd\rho_*=0$, the two tipping points merge when $\frac{\partial^2 L_*}{\partial \rho_*^2}=0$ and the solution
 $(\rho_c,n_0^{*})$ is the cusp. Setting $u:=\rho_*-\rho_c$ and $n_0-n_0^{*}$, which is where these two equations are satisfied. We get to the leading order \cref{app:cusp_algebra}
 \begin{equation}
@@ -1306,12 +1316,12 @@ The fold is thus born below jamming, at $89\%$ of the jamming density
 $\rhojam$, inside the interval where $\Dcol$ is decreasing.
 \section{Dependence of inverse sorting on initial conditions}
 \label{dependence}
-A de novo cavity invasion through the opening is implemented by seeding the density as a gaussian distribution centered at $x=25 \mathrm{\mu m}$ with a standard deviation of $x=20 \mathrm{\mu m}$. So the initial condition for the density is
+A de novo cavity invasion through the opening is implemented by seeding the density as a gaussian distribution centered at $x=25 \mathrm{\mu m}$ with a standard deviation of $20 \mathrm{\mu m}$. So the initial condition for the density is
 $\rho(x, t=0) = \rho_{\mathrm{seed}}\exp\left[-\frac{1}{2}\left(\frac{x-25}{20}\right)^2\right]$. The main simulations use $\rho_{\mathrm{seed}}=0.0001$, which equivalent to roughly 7 cells \cref{sec:extinction} in total and both strains equally seeded. So comfortably above the extinction threshold, since our model is continuum, meaning cells are not treated individually, seeding half a cell is not problematic since the simulation will continuously produce fractional cells either way. 
 \begin{figure}
 	\centering
 	\includegraphics[width=\linewidth]{frame_000000}
-	\caption{Initial profiles, showing the initial conditions for our main runs.}
+	\caption{Initial profiles, showing the initial conditions for our main runs. (a) The initial biomass seed $\rho$ over position, total (gray, dashed), glutton (red) and high affinity (blue) in the invasion setting. (b) Initial strain fraction $f$ over position, equal for our main simulations. (c) Initial nutrient condition, showcased for the dilute filled cavity.}
 	\label{fig:frame000000}
 \end{figure}
 
@@ -1424,13 +1434,13 @@ So $F_{ST}$ is bounded between 0 (completely homogeneous) and 1 (entirely hetero
 	\qquad
 	F_{ST}=0 \iff \partial_x f\equiv 0,
 	\qquad
-	F_{ST}=1 \iff f\in\{0,1\}\ \text{a.e. on}\ \{\rho>0\}.
+	F_{ST}=1 \iff f\in\{0,1\}\ \text{almost everywhere on}\ \{\rho>0\}.
 	\label{eq:fst-bounds}
 \end{equation}
 \begin{figure}
 	\centering
 	\includegraphics[width=0.6\linewidth]{fst_peak_vs_L}
-	\caption{Peak spatial heterogeneity $F_{ST}$ over cavity length in the dilute (blue) and jammed (orange) regime}
+	\caption{Peak spatial heterogeneity $F_{ST}$ over cavity length in the dilute (blue) and jammed (orange) regime.}
 	\label{fig:fstpeakvsl}
 \end{figure}
 \FloatBarrier
@@ -1447,9 +1457,9 @@ So $F_{ST}$ is bounded between 0 (completely homogeneous) and 1 (entirely hetero
 		\label{eq:q}
 	\end{equation}
 	The factor $0.95$ was arbitrarily chosen by trial and error, it was found to still give sensible results even at extremely high $n_0$, bounding $0\le \rho \le 1$ over the tested range. It was tested up to $n_0=10^6 \mathrm{\mu M}$, in the main simulations used in this thesis the growth factor was never activated and was $q=1$ throughout all runs, so it had no influence. For significantly higher $n_0$ it is absolutely necessary, without $q$ at $n_0=10^6 \mathrm{\mu M}$ run would result in $\rho \approx 2$ \ref{sec:factor}, which we would want to avoid in the implementation even if we do not consider such a large food source. The solver is first order split, with the reaction–nutrient coupling and
-	the jammed collective diffusion being solved implicitly using a damped Newton iteration with an analytic Jacobian. The CFL sub-cycling keeps the strain partition positive and the M-matrix structure of the label solve confines $f$ to $[0,1]$. \cite{Leveque} It uses a limiter (see \cref{convergence}).
+	the jammed collective diffusion being solved implicitly using a damped Newton iteration with an analytic Jacobian. This means that reaction and transport are solved in separate substeps and are first order in $\Delta t$. The CFL (Courant–Friedrichs–Lewy) sub-cycling keeps the strain partition positive and  the implicit step of the label solve confines $f$ to $[0,1]$ \cite{Leveque}. So per substep nothing moves further than one grid cell. It uses a limiter (see \cref{convergence}).
 	\subsection{Kernel decomposition}
-	In the finite volume discretization, the neutral update over one time step has
+	The cavity is split into $N_x$ cells of width $\Delta x$, $i$ is the cell index, $m$ the time step, $N$ the number of steps, $\one$ the vector of ones and $\Id$ the identity matrix. In the finite volume discretization, the neutral update over one time step has
 	the matrix form
 	\begin{equation}
 		h_i^{m+1}=\sum_j P_{ij}^{m} h_j^{m}.
@@ -1534,11 +1544,11 @@ turns \cref{eq:discrete-exact} into
 	+\sum_{m=0}^{N-1}\bigl\langle w^{m},\,\Delta h_{\rm sel}^m\bigr\rangle ,
 	\label{eq:adjoint-pairing}
 \end{equation}
-at \(O(N_x)\) per step for one target per sweep. The h profile is solved directly as the adjoint of the discrete transport and the heatmaps for the kernel use a van Leer adjoint with a targeted FCT limier. \(\sum_i w^m_i=\sum_i w^{m+1}_i\) holds because the forward operator preserves constants \cref{eq:discrete-row-sum}. All kernel runs reported here use \(\Delta x=0.5\,\mathrm{\mu m}\) so \(N_x=2000\) and
+at \(O(N_x)\) per step for one target per sweep. The h profile is solved directly as the adjoint of the discrete transport (solving backwards in time with the transposed matrix) and the heatmaps for the kernel use a van Leer adjoint with a targeted flux-corrected transport (FCT) limiter (\cref{convergence}). \(\sum_i w^m_i=\sum_i w^{m+1}_i\) holds because the forward operator preserves constants \cref{eq:discrete-row-sum}. All kernel runs reported here use \(\Delta x=0.5\,\mathrm{\mu m}\) so \(N_x=2000\) and
 are matrix free, \eqref{eq:adjoint-recursion} is iterated.
 	\subsection{Convergence}
 	\label{convergence}
-	With our discretization used, convergence is sufficient for every value and regime except the jammed $F_1$ solution. However to see the value $F_1$ settles towards requires a very long run time if the population is jammed. We used $dx=0.5 \mathrm{\mu m}$, which already takes a long time to compute for the run to finish. Finer mesh refinement would take even longer, $dx=0.25\mathrm{\mu m}$ would require a significantly longer runtime, which also is not converged. If we would actually want an error below $1\%$, a single full run of the jammed simulation could take days or weeks, which is far from a reasonable computing time. General dynamics and observed effects seem to not be affected by mesh refinement, solely the actual strain fraction. So the qualitative picture stands, while reported strain fraction values in a jammed population have a $15.11 \%$ error, which is very large. These are the values for a $\rho_{\mathrm{seed}}=10^{-6}$ and without the limiter the main runs used (see below).\\
+	This section concerns itself with the numerical convergence of our simulations, the reported numbers are run with $\rho_{\mathrm{seed}}=10^{-6}$, while our main runs use $\rho_{\mathrm{seed}}=10^{-4}$, and without the limiter (see below). With our discretization used, unlimited convergence is sufficient for every value and regime except the jammed $F_1$ solution. However to see the value $F_1$ settles towards requires a very long run time if the population is jammed. We used $dx=0.5 \mathrm{\mu m}$, which already takes a long time to compute for the run to finish. Finer mesh refinement would take even longer, $dx=0.25\mathrm{\mu m}$ would require a significantly longer runtime, which also is not converged. If we would actually want an error below $1\%$, a single full run of the jammed simulation could take days or weeks, which is far from a reasonable computing time. General dynamics and observed effects seem to not be affected by mesh refinement, solely the actual strain fraction. So the qualitative picture stands, while reported strain fraction values in a jammed population have a $15.11 \%$ error, which is very large.\\
 	\\
 	The values that were actual measured compared to the extrapolated limit in the convergence test all have large errors:
 	$$
@@ -1631,12 +1641,12 @@ The same expansion for $u<0$ gives
 	\label{eq:dnum}
 \end{equation}
 So increasing $dx$ directly feeds into the numerical "diffusion", making the final $f$ value untrustworthy.
-A way to fix this is using Flux corrected transport (FCT) and introducing a Van Leer flux limiter
-$f_{\mathrm{face}} = f_{\mathrm{donor}} + \frac{1}{2}\,\mathrm{limited}(a,b)$, which cancels the half grid cell offset. Near a sharp front this correction switches off to avoid an overshoot outside of the $[0,1]$ bound for $f$. Using it all the time would also make the profile oscillate and not using it results in large errors, so this switch is a sensible solution.
+A way to fix this is using a van Leer slope limiter
+$f_{\mathrm{face}} = f_{\mathrm{donor}} + \frac{1}{2}\,\mathrm{limited}(a,b)$, where $a=f_i-f_{i-1}$ and $b=f_{i+1}-f_i$ are the differences of the strain fraction between the donor cell $i$ and its upstream and downstream neighbors (for $u>0$, mirrored for $u<0$) \cite{leer}. The van Leer limiter is $\mathrm{limited}(a,b)=\frac{2ab}{a+b}$ if $ab>0$ and $0$ otherwise, which cancels the half grid cell offset. Near a sharp front this correction switches off to avoid an overshoot outside of the $[0,1]$ bound for $f$. Using it all the time would also make the profile oscillate and not using it results in large errors, so this switch is a sensible solution.
 \begin{figure}
 	\centering
 	\includegraphics[width=0.7\linewidth]{dnum_over_dself}
-	\caption{Comparison of the effect of numerical diffusion against self diffusion}
+	\caption{Comparison of the effect of numerical diffusion against self diffusion in the jammed regime. (a)/(b) Fraction of $D_\mathrm{num}/D_\mathrm{self}$ on a log-scale as a heatmap over position and time showing where numerical diffusion dominates for (a) $dx=2 \mathrm{\mu m}$ and (b) $dx=0.5\mathrm{\mu m}$. The black contour is the critical jamming density $\rho=\rho_{\mathrm{jam}}$ encasing the jammed region inside it. (c) Fraction $D_\mathrm{num}/D_\mathrm{self}$ over position at $dx=2\mathrm{\mu m}, t=300h$ (solid, red), $dx=2\mathrm{\mu m}, t=1000h$ (dashed, red), $dx=0.5\mathrm{\mu m}, t=292h$ (solid, blue), $dx=0.5\mathrm{\mu m}, t=1000h$ (dashed, blue). It shows the direct correlation to the chosen mesh $dx$, $D_{\mathrm{num}} \propto dx$.}
 	\label{fig:dnumoverdself}
 \end{figure}
 \FloatBarrier
@@ -1644,12 +1654,39 @@ Another issue is that $\rho_{\mathrm{seed}}=10^{-6}$ would be far below one sing
 \begin{figure}
 	\centering
 	\includegraphics[width=\linewidth]{grid_convergence_T2000}
-	\caption{Grid convergence of the jammed run, $n_0=1000 \mathrm{\mu M}$, $L=1000\mathrm{\mu m}$, $\rho_{\mathrm{seed}}=10^{-4}$, $T=2000\mathrm{h}$, van Leer limiter and Richardson limit, (a) Global composition at final time, (b) Errors relative to the limit, (c) Final profile $f_1$ over position, (d) Dominance variable $h$ over position at final time-}
+	\caption{Grid convergence of the jammed run, $n_0=1000 \mathrm{\mu M}$, $L=1000\mathrm{\mu m}$, $\rho_{\mathrm{seed}}=10^{-4}$, $T=2000\mathrm{h}$, van Leer limiter and Richardson limit for $dx=2,1,0.5,0.25 \mathrm{\mu m}$, (a) Global composition at final time, (b) Errors relative to the limit, (c) Final profile $f$ over position, (d) Dominance variable $h$ over position at final time.}
 	\label{fig:gridconvergencet2000}
 \end{figure}
-\FloatBarrier
+The time stepping $dt=0.05h$ used in the main runs is converged with the largest error being a $0.25\%$ difference in the position of the $n^*$ front (\cref{tab:conv-dt}).So all reported quantities for our main simulations are converged in both stepping sizes. Time step ($dt$) errors are $\leq 0.25\%$ and first order where they are monotone. The grid error is $\leq 0.02\%$ everywhere except jammed $F_1$ ($+1.7\%$, observed order $0.9$-$1.6$).\\
+	\begin{table}[ht]
+	\centering
+	\caption{}
+	\label{tab:conv-dt}
+	\small
+	\begin{tabular}{@{}lrrrrr@{}}
+		\toprule
+		& \multicolumn{3}{c}{van Leer, $\rho_{\rm seed}=10^{-4}$, $\Delta x = 0.5\ \mu$m} & & \\
+		\cmidrule(lr){2-4}
+		metric & $\Delta t = 0.1$ h & $\Delta t = 0.05$ h & $\Delta t = 0.025$ h & order $p$ & error at $\Delta t = 0.05$ h\\
+		\midrule
+		\multicolumn{6}{@{}l}{jammed: $n_0=1000\ \mu$M, $T=2000$ h}\\
+		\addlinespace[1pt]
+		$F_1$ & 0.322211 & 0.322914 & 0.322666 & --- & $<0.22$\%\\
+		$\rho_{\rm peak}$ & 0.659285 & 0.659314 & 0.659337 & 0.41 & $-0.007$\%\\
+		$x_{n^*}$ [$\mu$m] & 70.208 & 70.387 & 70.476 & 1.00 & $-0.25$\%\\
+		\addlinespace[3pt]
+		\multicolumn{6}{@{}l}{dilute: $n_0=15\ \mu$M, $T=500$ h}\\
+		\addlinespace[1pt]
+		$F_1$ & 0.949658 & 0.949267 & 0.949064 & 0.94 & $+0.043$\%\\
+		$\rho_{\rm peak}$ & 0.012251 & 0.012248 & 0.012246 & 0.98 & $+0.024$\%\\
+		$x_{n^*}$ [$\mu$m] & 32.848 & 32.930 & 32.972 & 1.00 & $-0.25$\%\\
+		\bottomrule
+	\end{tabular}
+\end{table}
+\\
+\\
 The kernel implementation shows a trend of convergence with decreasing $dx$ in the jammed case, where the theory run has a significant error near the opening due to the same numerical diffusion problem (\cref{fig:adjointconvergenceoverlay}). The introduction of the same Van Leer limiter to fix the numerical diffusion would lead to the kernel possibly having negative entries and as such it would lose its interpretation as an ancestral probability distribution showing the mean trajectory.
-\begin{figure}
+\begin{figure}[!htbp]
 	\centering
 	\includegraphics[width=\linewidth]{adjoint_convergence_overlay}
 	\caption{Dominance variable $h$ over position at final time $T=2000h$ in the jammed case $n_0=1000 \mathrm{\mu M}$. Theory and numerical values for $dx=2,1,0.5 \mathrm{\mu m}$}
@@ -1659,13 +1696,18 @@ The kernel implementation shows a trend of convergence with decreasing $dx$ in t
 \subsection{Extinction}
 \label{sec:extinction}
 Our model is a continuum and as such there is no definition of a cell directly implemented, which means we dont have a direct way of quantifying whether or not a strain had gone extinct or not. To tell if there is enough biomass to form at least one cell we assume our cavity to be a squashed in microfluidic panflute. The experimental device has the dimensions $L \times 20 \mathrm{\mu m} \times 50 \mathrm{\mu m}$ \cite{Karita} and an average E. coli cell has a volume of $0.6-0.7 \mathrm{\mu m}^3$ \cite{volume}. So the amount of cells in our cavity is $N=\frac{MA}{V_{\mathrm{cell}}}$ with $A=50\times20 \mathrm{\mu m}^2=1000\mathrm{\mu m}^2$, $M=\int_{0}^{L}\rho_{i}(x)\,dx$ for strain $i$ and $V_{\mathrm{cell}}=0.65\mathrm{\mu m}^3$. So the extinction floor for each strain is $M_{i}=0.00065 \mathrm{\mu m}$, meaning there is enough biomass in the cavity left to form one cell of strain $i=1,2$. If a strain dips below this value it is considered extinct and the other strain respectively is crowned the victor, successfully excluding its competitor.
-	\paragraph{Use of Large Language Models (LLMs)}
-	The LLM Claude Code was used for programming in Python, numerical methods, preliminary data analysis of large data sets, GitHub, LaTeX formatting, review purposes and finding relevant literature.
+
+	\paragraph{Data availability}
+	The code and its output is available on GitHub: \url{https://github.com/heartsmear/nutrient-limited-cavity/tree/main}
 	\chapter{Discussion}
 	\section{Interpretation and relation to existing literature}
+	We showed with a single species that nutrient limitation changes how a cavity jams. Karita worked with nutrient rich conditions and observed an abrupt jamming transition \cite{Karita}, while Peris Yagüe showed qualitatively that this transition can become continuous in a non-constant growth model \cite{peris}. We found that whether a cavity can jam or not is decided by the nutrient budget, in our E. Coli-Glucose system a nutrient supply of at least $n_0^{\mathrm{crit}}=782.1\,\mathrm{\mu M}$ is needed for jamming, below it remains dilute regardless of the cavity length. Just above it the transition from dilute to jammed is continuous, since by the time the cavity jams the cells at the dead end are already starved and there is nothing left to amplify. The fold first appears just above $n_0^{*}=896.2\,\mathrm{\mu M}$ and near this cusp the tipping point separation and bistable window width grow with predicted exponents of $1/2$ and $3/2$ (numerically measured $0.497$ and $1.487$). The onset of colonization is gradual, the empty cavity loses stability at the onset/establishment length through a transcritical bifurcation, generalizing Karitas result to nutrient dependent growth rather than just constant \cite{Karita, bifurcation}. \\
+	\\
+	For two bacterial strains competing for the same resource, the central finding of this thesis is inverse sorting. This stands is strong contrast to the classical picture of niche partitioning in which competing populations sort into their own niche, following their environmental advantage (e.g. the Anolis lizards of Bimini) \cite{lizard}. In a dilute cavity inverse sorting is transient with the winner of the competition being decided by Tilmans $R^*$ rule \cite{rstar}. However jamming freezes the composition before this result can be reached, as such this effect can become permanent over a cells lifespan and the strains can coexist. Slepukhin found that strains can separate by placing geometric defects in the cavity \cite{slepukhin}, in our model this happens even without any changes to the geometry, just by growth and transport alone. To explain this phenomenon, we use an ancestry kernel tracing the cells backwards in time. This can be seen as the deterministic analogue of the backwards density Hallatschek and Nelson \cite{gene, lifeexp} and the genealogies of Durrett and Fan \cite{tracer}. Splitting the selection experienced by ancestors of the biomass at a given position into reinforcing and opposing exposure gives a criterion for whether the composition at this point is inverse sorted. We also determined where the biomass comes from, almost all of it is produced in a narrow band near the opening, within $0-75\,\mathrm{\mu m}$ in the dilute and $0-63\,\mathrm{\mu m}$ in the jammed cavity. Using our kernel we determined that for the final times chosen in our main simulations only $12.1\%$ (dilute) and $3.4\%$ (jammed) of the produced biomass survive until the end. A similar growth band has previously been observed in oxygen limited biofilms \cite{produ}. Spatial heterogeneity increases with cavity length and nutrient supply, from an essentially well mixed short dilute cavity of $100\,\mathrm{\mu m}$ ($F_{ST}\approx0.001$) to a strongly segregated long jammed cavity of $1\,\mathrm{mm}$ ($F_{ST}\approx0.91$). \\
+	\\
 	A carious lesion is a dead end pore ranging from the micron to millimeter scale, with cells forming biofilm colonies consisting of Streptococcus and Lactobacillus \cite{lesion}. Dige et al. found that genetic diversity at the opening is larger and more heterogeneous than in the interior. Our mechanical analysis suggest that under nutrient limitation this could be due to an early time advantage of one strain that got advected inwards and stranded while the opening remains temporarily competitive around the $n^*$ front. For example a dilute cavity after 4 days carries this signature \ref{fig:hdil}. So in our interpretation the deep lesion composition would consist of which strain had the early time advantage and not who is more adapted to the local environment. The general conclusion of our analysis is that a composition snapshot at a point in time is not indicative of the individual strain properties as they can largely sort against their advantage.\\
 	\\
-	Strains occupying regions where they are disfavored has previously been described in the form of gene surfing, caused by a stochastic drift \cite{gene} \cite{lifeexp} \cite{stepping}. As a colony expands its habitat, the front of the colonization is sparse with decaying heterozygosity. Meaning that the stochastic drift carries the lesser fit strain into the habitat, making it occupy disfavored regions. Our model is deterministic, meaning that it only holds validity in the bulk as in small populations stochastic effects dominate. As such it can be seen as the deterministic counterpart to gene surfing.
+	Strains occupying regions where they are disfavored has previously been described in the form of gene surfing, caused by a stochastic drift from random fluctuations in which cells happen to reproduce \cite{gene, lifeexp, stepping}. As a colony expands its habitat, the front of the colonization is sparse with decaying heterozygosity (genetic diversity). Meaning that the stochastic drift carries the lesser fit strain into the habitat, making it occupy disfavored regions. Our model is deterministic, meaning that it only holds validity in the bulk as in small populations stochastic effects dominate. As such it can be seen as the deterministic counterpart to gene surfing.
 	\section{Limitations}
 	The central inverse sorting criterion deals in absolutes, meaning that biomass is only classified as inverse if the historical selection the cells went through disagrees with the current advantage \eqref{eq:exposure-criterion2}. However if we would for example consider a strain fraction with a monotonically decreasing profile, but with all f values being dominates by one strain, e.g. $f(x,t)\le0.5$ for a fixed point in time. Then an inverse sorted opening cannot exist, since it favors and is dominated by the glutton, however there would still be a bigger share of the high affinity strain in sections where it is disfavored (opening) compared to regions where it has the advantage (interior and deep). So in relative terms the profile or trend is still inverse, but the criterion would characterize the opening as normally sorted since the the correct strain wins. Inverse sorted biomass can still have an increasing profile in the section, as for example in a dilute cavity \ref{fig:hdil}, so a non-monotone fraction function can still be inverse sorted in its increasing region, so reducing the criterion to a decreasing profile is also not valid. Two separate categorizations of the existing "absolute" inverse sorting and "relative" inverse sorting could be sensible, since each have their own drawbacks.\\
 	\\
@@ -1678,7 +1720,9 @@ Our model is a continuum and as such there is no definition of a cell directly i
 	An interesting consideration would be the inclusion of chemotaxis as the washout opening would become a death trap for cells chasing the nutrient gradient too greedily. Chemotaxis being the source of a cell swimming towards their death has previously been observed by chasing the toxic antibiotic gradient, actively committing suicide \cite{suicide}. When the glutton chases the nutrient gradient more strongly than the high affinity strain, this could counteract the expansion phase where it colonizes the interior and deep end. It would be decided by comparing advection with chemotactic effects, a jammed cavity could possibly even return to being normally sorted if the glutton is pinned towards the opening. Similar to how cell death or shrinkage could also slowly get rid of the glutton graveyard at the deep end. Another important mechanism in bacterial colonization is cross feeding \cite{cross}, where a strain excretes a chemical after consuming nutrients, which can be consumed gain, by e.g. the other. This could also heavily alter dynamics, since if e.g. the high affinity strain is the sole consumer of the excrete it can make up the growth disadvantage in the earlier stages by having a higher nutrient availability. Even if both strains eat each others excretes, because the glutton has a much higher consumption initially, this would give the high affinity strain more nutrients to consume and grow by, potentially leading to a stronger recovery. In our simulations the inside of the cavity quickly becomes devoid of nutrients and growth is exclusive to a small band near the opening. By recycling the interior can be supplied with excretes nutrients by the cells themselves, giving a chance to the high affinity strain to actually realize their local growth advantage there. 
 	
 	\chapter{Conclusion}
-	We investigated phase transitions under nutrient limitation, showing that it can lead to a continuous jamming transition, which was previously only known as abrupt in nutrient rich colonies \cite{Karita}. The establishment transition in opposition is always gradual, making it a continuous process. We derived and numerically validated the threshold length formula, directly relating cavity length and the nutrient exhaustion needed to reach it in steady state. Assuming an entirely jammed or dilute cavity allows significant simplifications on the system making it analytically solvable. Most notably we discovered the inverse sorting phenomenon, in which strains sort, at certain points in time even entirely, against their advantage. This effect is transient in dilute population, but the jammed regime can make it freeze over any reasonable timescale for real cells making it essentially permanent for the cells lifespan. The kernel decomposition was developed as a theoretical description of the problem, with the central theorem determining if the composition is inverse sorted at a certain point in time. This works by weighing biomass contributions of all past points in time, with the history being split in a reinforcing and opposing exposure. Meaning does the historical selection that contributed to this point agree with the current advantage or not. The PDE was solved analytically with the duhamel formula. Nutrient concentration and cavity length were both found to be positively correlated to spatial heterogeneity, making a long nutrient rich cavity almost entirely spatially diverse with strongly segregated strains and a short dilute cavity essentially well-mixed. 
+	Nutrient limitation in confined populations changes whether a dead end cavity gets colonized and how the strains forming the colony are sorted. A cavity can only reach the jammed state if enough nutrients are supplied, and close to this minimum the transition is gradual rather than abrupt as under nutrient rich conditions \cite{Karita}. The establishment transition in opposition is always gradual, making it a continuous process. \\
+	\\When two strains with crossing growth functions compete for the same limited nutrient, we observed that their sorting in the cavity is not set by the local environment. Both strains dominate regions where their competitor has the advantage, because composition is inherited from a history of selection and transport. Tracing that history backwards in time explains the observed composition at any point in time. In a dilute cavity this inverse sorting is transient, while in a jammed one it gets frozen in time and becomes effectively permanent. Nutrient concentration and cavity length were both found to be positively correlated to spatial heterogeneity, making a long nutrient rich cavity almost entirely spatially diverse with strongly segregated strains and a short dilute cavity essentially well-mixed.\\
+	\\ A snapshot of which strain lives where in a confined cavity therefore says more about its past than about which strain is better adapted to this environment, which should be kept in mind when reading compositions of confined microbial communities.
 	\printbibliography
 
 	\appendix
@@ -3714,7 +3758,7 @@ Inverting $\Psi(\rho)=D_0\rho+\tfrac12D_{\rm col}'(0)\rho^2+O(\rho^3)$ order by 
 	\rho\ge0.
 	\]
 	Thus there is no physical negative amplitude branch. The local amplitude
-	equation is therefore transcritical/logistic in character \cite{bifurcation}: the zero branch
+	equation is therefore transcritical in character \cite{bifurcation}: the zero branch
 	persists, while a one-sided positive branch emerges for
 	$L>L_{\rm onset}$.  This is why the amplitude scales as
 	\[
@@ -4479,7 +4523,7 @@ $L_*(\rho_+)<L_*(\rho_-)$. Inserting
 	\FloatBarrier
 	\section{Growth factor}
 	\label{sec:factor}
-	Without the growth factor, densities can climb above 1, they have different run times, but both runs have reached their biomass maximum by $T \approx 30h$. So the run time difference is irrelevant. Not only can it result in nonsensical densities, but as seen in the first figure \ref{fig:noq}, the density overshoot can itself result in the wrong dynamics with a dip trade-off at $x\approx 700$ at the strain 1 selection front $n^*$. So the absence of the growth factor $q$ at very high $n_0$ can not only result in wrong density numbers, but in turn the overshoot can result in different dynamics. These are old runs without the limiter and with a seed of $\rho_{\mathrm{seed}}=10^{-16}$, so these are illustrations of the now fixed problems.
+	Without the growth factor, densities can climb above 1, they have different run times, but both runs have reached their biomass maximum by $T \approx 30h$. So the run time difference is irrelevant. Not only can it result in nonsensical densities, but as seen in the first figure \ref{fig:noq}, the density overshoot can itself result in the wrong dynamics with a dip trade-off at $x\approx 700$ at the strain 1 selection front $n^*$. So the absence of the growth factor $q$ at very high $n_0$ can not only result in wrong density numbers, but in turn the overshoot can result in different dynamics. These are old runs without the limiter and with a seed of $\rho_{\mathrm{seed}}=10^{-6}$, so these are illustrations of the now fixed problems.
 	\begin{figure}[htbp]
 		\centering
 		\begin{subfigure}{0.45\textwidth}
@@ -4578,5 +4622,23 @@ For the dilute cavity we use $n_0=15\,\mathrm{\mu M}$, $L=1000\,\mathrm{\mu m}$.
 	\label{eq:rstar_cavity}
 \end{equation}
 so $R^{*}_1<R^{*}_2$. So the high affinity strain has the lower $R^*$ and therefore is expected to win by Tilmans prediction. Tilmans $R^*$ assumes a well mixed chemostat, using the total dilution rate rather than the individual one. Our cavity however is not well mixed, $m^{\mathrm{eff}}$ differs per strain: $m_1^{\mathrm{eff}} = 8.81 \times 10^{-3}, m_2^{\mathrm{eff}} = 2.23 \times 10^{-3}$, so the gluttons spatial refuge in the deep end results in a fourfold lower washout rate but loses anyway.
+
+\chapter*{Eigenständigkeitserklärung}
+Hiermit versichere ich, dass ich die vorliegende Arbeit in allen Teilen selbstständig angefertigt
+und keine anderen als die in der Arbeit angegebenen Quellen und Hilfsmittel benutzt habe, und
+dass die Arbeit in gleicher oder ähnlicher Form in noch keiner anderen Prüfung vorgelegen hat. Sämtliche wörtlichen oder sinngemäßen Übernahmen und Zitate sind kenntlich gemacht und nachgewiesen. Ich versichere, dass ich keine Hilfsmittel verwendet habe, deren Nutzung die Prüferin oder der Prüfer explizit ausgeschlossen hat.
+\paragraph{Nutzung von Large Language Models (LLMs)}
+Das LLM Claude Code wurde zur Unterstützung bei der Programmierung in Python, bei der Anwendung numerischer Methoden, bei der vorläufigen Analyse großer Datensätze, bei der Einrichtung eines GitHub-Repositories und der Nutzung von Git, bei der Formatierung von LaTeX-Tabellen sowie zu Feedback- und Review-Zwecken eingesetzt. Darüber hinaus wurde es als Recherchehilfe zur Identifikation relevanter wissenschaftlicher Literatur verwendet.
+
+
+\vspace{2cm}
+
+\noindent
+\begin{tabular}{p{7cm}p{7cm}}
+	Leipzig,  & \\
+	\rule{6cm}{0.4pt} & \rule{6cm}{0.4pt} \\
+	Ort, Datum & Unterschrift
+\end{tabular}
+
 
 \end{document}

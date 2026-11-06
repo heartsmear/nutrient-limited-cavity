@@ -10,7 +10,7 @@ is fed with glucose only through its opening, where cells are also washed out.
   strain dominates regions in which it is locally disfavoured. An ancestry kernel explains it.
 
 The thesis itself is in [`thesis/`](thesis/): `draft2.tex`, the compiled `draft2.pdf`,
-`references2.bib` and the 42 figures it includes. That is everything `draft2.tex` needs to
+`references2.bib` and the 43 figures it includes. That is everything `draft2.tex` needs to
 compile (pdflatex + biber).
 
 ## Model
@@ -169,6 +169,7 @@ Output folders are named by their parameters. For example,
 | discretisation-error table | `sweep_dx.py`, `sweep_dt.py`, then `plot_conv_test.py` | `conv_dx_*/`, `conv_dt_*/` |
 | `growthfactor` | `figures.py`, `--n0 1e6 --T 1000` (donor-cell, `rho_seed = 1e-6`) | `run_n0-1e+06_dx0.5_T1000/` ¹ |
 | `nogrowthfactor` | the earlier `src/` code, not part of this repository | — |
+| `pnas.2115496119fig012` | reproduced from Karita et al., *PNAS* 119(7), e2115496119 (2022), Fig. 1A–B; not produced by this code | — |
 
 ¹ Reads the run's `full_dump.csv`, which is not included (about 110 MB per run). Re-run the run
 first. Every other figure regenerates from the repository alone.
